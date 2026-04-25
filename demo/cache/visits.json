@@ -1,0 +1,563 @@
+{
+  "devmapVersion": "1.0.0",
+  "generatedAt": "2026-04-25T15:53:47.206Z",
+  "feature": {
+    "name": "visits",
+    "displayName": "Visits",
+    "summary": "The visits feature manages the full lifecycle of veterinary visit records, exposing REST endpoints on visits-service to create and retrieve visits per pet, backed by a JPA repository and visits database table. It is surfaced to end users through the api-gateway's owner-details aggregation flow, where visit data for all of an owner's pets is fetched in bulk and merged with customer information behind a circuit breaker."
+  },
+  "repository": {
+    "name": "spring-petclinic-microservices",
+    "rootPath": "<repo>",
+    "language": "java",
+    "framework": "spring-boot",
+    "microservices": [
+      {
+        "name": "admin-server",
+        "module": "spring-petclinic-admin-server",
+        "port": 9090
+      },
+      {
+        "name": "api-gateway",
+        "module": "spring-petclinic-api-gateway",
+        "port": 8080
+      },
+      {
+        "name": "config-server",
+        "module": "spring-petclinic-config-server",
+        "port": 8888
+      },
+      {
+        "name": "customers-service",
+        "module": "spring-petclinic-customers-service",
+        "port": 8081
+      },
+      {
+        "name": "discovery-server",
+        "module": "spring-petclinic-discovery-server",
+        "port": 8761
+      },
+      {
+        "name": "genai-service",
+        "module": "spring-petclinic-genai-service",
+        "port": 8084
+      },
+      {
+        "name": "vets-service",
+        "module": "spring-petclinic-vets-service",
+        "port": 8083
+      },
+      {
+        "name": "visits-service",
+        "module": "spring-petclinic-visits-service",
+        "port": 8082
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "api.application.VisitsServiceClient",
+      "fqn": "org.springframework.samples.petclinic.api.application.VisitsServiceClient",
+      "simpleName": "VisitsServiceClient",
+      "kind": "client",
+      "microservice": "api-gateway",
+      "filePath": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/application/VisitsServiceClient.java",
+      "loc": 58,
+      "annotations": [
+        "@Component"
+      ],
+      "publicMethods": [],
+      "summary": "Fetches visit records from the visits microservice using a reactive WebClient, accepting a list of pet IDs and returning visit data as a Mono.",
+      "core": true
+    },
+    {
+      "id": "visits.model.Visit",
+      "fqn": "org.springframework.samples.petclinic.visits.model.Visit",
+      "simpleName": "Visit",
+      "kind": "entity",
+      "microservice": "visits-service",
+      "filePath": "spring-petclinic-visits-service/src/main/java/org/springframework/samples/petclinic/visits/model/Visit.java",
+      "loc": 127,
+      "annotations": [
+        "@Entity",
+        "@Table"
+      ],
+      "publicMethods": [],
+      "summary": "Represents a veterinary visit record with date, description, and associated pet ID, persisted to the visits table and exposed through VisitResource. Includes a builder for convenient object construction.",
+      "core": true
+    },
+    {
+      "id": "visits.model.VisitRepository",
+      "fqn": "org.springframework.samples.petclinic.visits.model.VisitRepository",
+      "simpleName": "VisitRepository",
+      "kind": "repository",
+      "microservice": "visits-service",
+      "filePath": "spring-petclinic-visits-service/src/main/java/org/springframework/samples/petclinic/visits/model/VisitRepository.java",
+      "loc": 39,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Provides data access for Visit domain objects, enabling queries to retrieve visits by individual pet ID or multiple pet IDs using Spring Data conventions.",
+      "core": true
+    },
+    {
+      "id": "visits.web.VisitResource",
+      "fqn": "org.springframework.samples.petclinic.visits.web.VisitResource",
+      "simpleName": "VisitResource",
+      "kind": "controller",
+      "microservice": "visits-service",
+      "filePath": "spring-petclinic-visits-service/src/main/java/org/springframework/samples/petclinic/visits/web/VisitResource.java",
+      "loc": 83,
+      "annotations": [
+        "@RestController",
+        "@Timed"
+      ],
+      "publicMethods": [
+        {
+          "name": "create",
+          "signature": "create(...)",
+          "annotations": [
+            "@PostMapping"
+          ],
+          "lineStart": 56
+        },
+        {
+          "name": "read",
+          "signature": "read(...)",
+          "annotations": [
+            "@GetMapping"
+          ],
+          "lineStart": 67
+        },
+        {
+          "name": "read",
+          "signature": "read(...)",
+          "annotations": [
+            "@GetMapping"
+          ],
+          "lineStart": 72
+        }
+      ],
+      "summary": "Exposes REST endpoints to create and retrieve pet visits, delegating persistence operations to the VisitRepository and applying request validation and performance metrics.",
+      "core": true
+    },
+    {
+      "id": "api.application.CustomersServiceClient",
+      "fqn": "org.springframework.samples.petclinic.api.application.CustomersServiceClient",
+      "simpleName": "CustomersServiceClient",
+      "kind": "client",
+      "microservice": "api-gateway",
+      "filePath": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/application/CustomersServiceClient.java",
+      "loc": 42,
+      "annotations": [
+        "@Component"
+      ],
+      "publicMethods": [],
+      "summary": "Fetches owner details from the customers-service using a reactive WebClient, providing a Mono-wrapped response for the API gateway to retrieve customer information by owner ID.",
+      "core": false
+    },
+    {
+      "id": "api.boundary.web.ApiGatewayController",
+      "fqn": "org.springframework.samples.petclinic.api.boundary.web.ApiGatewayController",
+      "simpleName": "ApiGatewayController",
+      "kind": "controller",
+      "microservice": "api-gateway",
+      "filePath": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/boundary/web/ApiGatewayController.java",
+      "loc": 84,
+      "annotations": [
+        "@RestController",
+        "@RequestMapping"
+      ],
+      "publicMethods": [
+        {
+          "name": "getOwnerDetails",
+          "signature": "getOwnerDetails(...)",
+          "annotations": [
+            "@GetMapping"
+          ],
+          "lineStart": 54
+        }
+      ],
+      "summary": "Aggregates owner and pet visit data from downstream microservices via reactive clients, applying circuit breaker resilience to the visits service call before enriching the owner details response.",
+      "core": false
+    },
+    {
+      "id": "api.dto.OwnerDetails",
+      "fqn": "org.springframework.samples.petclinic.api.dto.OwnerDetails",
+      "simpleName": "OwnerDetails",
+      "kind": "dto",
+      "microservice": "api-gateway",
+      "filePath": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/dto/OwnerDetails.java",
+      "loc": 98,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Represents owner profile data transferred between the api-gateway and client, including personal details and associated pets, with a builder pattern for construction and a helper method to extract pet IDs.",
+      "core": false
+    },
+    {
+      "id": "api.dto.VisitDetails",
+      "fqn": "org.springframework.samples.petclinic.api.dto.VisitDetails",
+      "simpleName": "VisitDetails",
+      "kind": "dto",
+      "microservice": "api-gateway",
+      "filePath": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/dto/VisitDetails.java",
+      "loc": 27,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Represents a visit record with its identifier, associated pet, visit date, and clinical description for transfer between the api-gateway and visits service.",
+      "core": false
+    },
+    {
+      "id": "api.dto.Visits",
+      "fqn": "org.springframework.samples.petclinic.api.dto.Visits",
+      "simpleName": "Visits",
+      "kind": "dto",
+      "microservice": "api-gateway",
+      "filePath": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/dto/Visits.java",
+      "loc": 32,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Encapsulates a collection of visit details as a data transfer object for API responses in the gateway, providing a container for multiple VisitDetails items with a default empty constructor.",
+      "core": false
+    }
+  ],
+  "flow": {
+    "mermaid": "sequenceDiagram\n  participant Client\n  participant GW as ApiGatewayController\n  participant CC as CustomersServiceClient\n  participant VC as VisitsServiceClient\n  participant CS as customers-service\n  participant VR as VisitResource\n  participant Repo as VisitRepository\n  participant DB as visits DB\n\n  Client->>GW: GET /api/gateway/owners/{ownerId}\n  GW->>CC: getOwner(ownerId)\n  CC->>CS: GET /api/customer/owners/{ownerId} (lb)\n  CS-->>CC: OwnerDetails (with pets)\n  CC-->>GW: Mono<OwnerDetails>\n  GW->>VC: getVisitsForPets(petIds)\n  note over GW,VC: circuit breaker applied\n  VC->>VR: GET /api/visit/pets/visits?petId=... (lb)\n  VR->>Repo: findByPetIdIn(petIds)\n  Repo->>DB: SELECT * FROM visits WHERE pet_id IN (...)\n  DB-->>Repo: List<Visit>\n  Repo-->>VR: List<Visit>\n  VR-->>VC: Visits (JSON)\n  VC-->>GW: Mono<Visits>\n  GW-->>Client: OwnerDetails enriched with VisitDetails[]",
+    "narrative": "A client requests owner details via GET /api/gateway/owners/{ownerId} on the ApiGatewayController, which reactively fans out to two downstream services. CustomersServiceClient fetches the owner profile (including their pets) from customers-service, while VisitsServiceClient — protected by a circuit breaker — calls VisitResource on visits-service with the extracted pet IDs. VisitResource delegates to VisitRepository, which issues a bulk SQL query against the visits table. The gateway then merges the owner profile with the returned Visits collection and returns a fully enriched OwnerDetails response to the caller.",
+    "steps": [
+      {
+        "index": 1,
+        "actor": "Client",
+        "action": "Sends GET /api/gateway/owners/{ownerId}",
+        "componentId": "api.boundary.web.ApiGatewayController",
+        "details": "Entry point into the api-gateway; triggers reactive aggregation flow"
+      },
+      {
+        "index": 2,
+        "actor": "ApiGatewayController",
+        "action": "Calls CustomersServiceClient to fetch owner profile",
+        "componentId": "api.application.CustomersServiceClient",
+        "details": "Reactive WebClient call to customers-service; returns Mono<OwnerDetails>"
+      },
+      {
+        "index": 3,
+        "actor": "CustomersServiceClient",
+        "action": "HTTP GET to customers-service (load-balanced)",
+        "componentId": "api.application.CustomersServiceClient",
+        "details": "GET /api/customer/owners/{ownerId} via Eureka discovery"
+      },
+      {
+        "index": 4,
+        "actor": "ApiGatewayController",
+        "action": "Extracts pet IDs from OwnerDetails and calls VisitsServiceClient (circuit-breaker wrapped)",
+        "componentId": "api.application.VisitsServiceClient",
+        "details": "Uses OwnerDetails.getPetIds(); circuit breaker provides fallback if visits-service is unavailable"
+      },
+      {
+        "index": 5,
+        "actor": "VisitsServiceClient",
+        "action": "HTTP GET to visits-service for bulk pet visits (load-balanced)",
+        "componentId": "api.application.VisitsServiceClient",
+        "details": "GET /api/visit/pets/visits?petId=... via Eureka discovery; returns Mono<Visits>"
+      },
+      {
+        "index": 6,
+        "actor": "VisitResource",
+        "action": "Handles read() request, delegates to VisitRepository",
+        "componentId": "visits.web.VisitResource",
+        "details": "@GetMapping on /pets/visits; @Timed for performance metrics; validates request"
+      },
+      {
+        "index": 7,
+        "actor": "VisitRepository",
+        "action": "Queries database for visits by pet IDs",
+        "componentId": "visits.model.VisitRepository",
+        "details": "findByPetIdIn(petIds) → SELECT * FROM visits WHERE pet_id IN (...)"
+      },
+      {
+        "index": 8,
+        "actor": "VisitRepository",
+        "action": "Returns hydrated Visit entities",
+        "componentId": "visits.model.Visit",
+        "details": "Each Visit carries date, description, and petId; mapped from visits table"
+      },
+      {
+        "index": 9,
+        "actor": "VisitResource",
+        "action": "Serialises Visit list into Visits DTO response",
+        "componentId": "visits.web.VisitResource",
+        "details": "Returns JSON payload consumed by VisitsServiceClient as Visits wrapper"
+      },
+      {
+        "index": 10,
+        "actor": "ApiGatewayController",
+        "action": "Merges OwnerDetails with Visits and returns enriched response to client",
+        "componentId": "api.boundary.web.ApiGatewayController",
+        "details": "Combines Mono<OwnerDetails> and Mono<Visits> reactively; client receives owner + full visit history"
+      }
+    ]
+  },
+  "dependencies": {
+    "nodes": [
+      {
+        "id": "api.application.VisitsServiceClient",
+        "label": "VisitsServiceClient",
+        "microservice": "api-gateway",
+        "kind": "client",
+        "loc": 58
+      },
+      {
+        "id": "visits.model.Visit",
+        "label": "Visit",
+        "microservice": "visits-service",
+        "kind": "entity",
+        "loc": 127
+      },
+      {
+        "id": "visits.model.VisitRepository",
+        "label": "VisitRepository",
+        "microservice": "visits-service",
+        "kind": "repository",
+        "loc": 39
+      },
+      {
+        "id": "visits.web.VisitResource",
+        "label": "VisitResource",
+        "microservice": "visits-service",
+        "kind": "controller",
+        "loc": 83
+      },
+      {
+        "id": "api.application.CustomersServiceClient",
+        "label": "CustomersServiceClient",
+        "microservice": "api-gateway",
+        "kind": "client",
+        "loc": 42
+      },
+      {
+        "id": "api.boundary.web.ApiGatewayController",
+        "label": "ApiGatewayController",
+        "microservice": "api-gateway",
+        "kind": "controller",
+        "loc": 84
+      },
+      {
+        "id": "api.dto.OwnerDetails",
+        "label": "OwnerDetails",
+        "microservice": "api-gateway",
+        "kind": "dto",
+        "loc": 98
+      },
+      {
+        "id": "api.dto.VisitDetails",
+        "label": "VisitDetails",
+        "microservice": "api-gateway",
+        "kind": "dto",
+        "loc": 27
+      },
+      {
+        "id": "api.dto.Visits",
+        "label": "Visits",
+        "microservice": "api-gateway",
+        "kind": "dto",
+        "loc": 32
+      }
+    ],
+    "edges": [
+      {
+        "from": "api.application.CustomersServiceClient",
+        "to": "customers-service",
+        "type": "http",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/application/CustomersServiceClient.java",
+        "sourceLine": 37
+      },
+      {
+        "from": "api-gateway",
+        "to": "vets-service",
+        "type": "gateway-route",
+        "label": "Path=/api/vet/** -> lb://vets-service",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/resources/application.yml"
+      },
+      {
+        "from": "api-gateway",
+        "to": "visits-service",
+        "type": "gateway-route",
+        "label": "Path=/api/visit/** -> lb://visits-service",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/resources/application.yml"
+      },
+      {
+        "from": "api-gateway",
+        "to": "customers-service",
+        "type": "gateway-route",
+        "label": "Path=/api/customer/** -> lb://customers-service",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/resources/application.yml"
+      },
+      {
+        "from": "api-gateway",
+        "to": "genai-service",
+        "type": "gateway-route",
+        "label": "Path=/api/genai/** -> lb://genai-service",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/resources/application.yml"
+      },
+      {
+        "from": "api.application.CustomersServiceClient",
+        "to": "api.dto.OwnerDetails",
+        "type": "import"
+      },
+      {
+        "from": "api.application.VisitsServiceClient",
+        "to": "api.dto.Visits",
+        "type": "import"
+      },
+      {
+        "from": "api.boundary.web.ApiGatewayController",
+        "to": "api.application.CustomersServiceClient",
+        "type": "import"
+      },
+      {
+        "from": "api.boundary.web.ApiGatewayController",
+        "to": "api.application.VisitsServiceClient",
+        "type": "import"
+      },
+      {
+        "from": "api.boundary.web.ApiGatewayController",
+        "to": "api.dto.OwnerDetails",
+        "type": "import"
+      },
+      {
+        "from": "api.boundary.web.ApiGatewayController",
+        "to": "api.dto.Visits",
+        "type": "import"
+      },
+      {
+        "from": "visits.web.VisitResource",
+        "to": "visits.model.Visit",
+        "type": "import"
+      },
+      {
+        "from": "visits.web.VisitResource",
+        "to": "visits.model.VisitRepository",
+        "type": "import"
+      }
+    ]
+  },
+  "persistence": {
+    "mermaidER": "erDiagram\n  VISIT {\n    Integer id PK\n    Date visit_date\n    String description\n    int pet_id FK_byValue\n  }\n  PET ||..o{ VISIT : \"FK by petId (cross-service)\"",
+    "entities": [
+      {
+        "fqn": "org.springframework.samples.petclinic.visits.model.Visit",
+        "simpleName": "Visit",
+        "table": "visits",
+        "fields": [
+          {
+            "name": "id",
+            "type": "Integer",
+            "primaryKey": true
+          },
+          {
+            "name": "date",
+            "type": "Date",
+            "column": "visit_date"
+          },
+          {
+            "name": "description",
+            "type": "String",
+            "column": "description"
+          },
+          {
+            "name": "petId",
+            "type": "int",
+            "column": "pet_id",
+            "relation": {
+              "kind": "ForeignKeyByValue",
+              "target": "Pet (customers-service)",
+              "joinColumn": "pet_id"
+            }
+          }
+        ]
+      }
+    ],
+    "operations": [
+      {
+        "entity": "Visit",
+        "method": "findByPetId(int)",
+        "inferredSql": "SELECT v.* FROM visits v WHERE v.pet_id = ?",
+        "custom": true
+      },
+      {
+        "entity": "Visit",
+        "method": "findByPetIdIn(Collection<Integer>)",
+        "inferredSql": "SELECT v.* FROM visits v WHERE v.pet_id IN (?, ?, ...)",
+        "custom": true
+      },
+      {
+        "entity": "Visit",
+        "method": "save(Visit)",
+        "inferredSql": "INSERT INTO visits (...) / UPDATE visits SET ... WHERE id = ?",
+        "custom": false
+      },
+      {
+        "entity": "Visit",
+        "method": "findById(Integer)",
+        "inferredSql": "SELECT v.* FROM visits v WHERE v.id = ?",
+        "custom": false
+      }
+    ]
+  },
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/owners/*/pets/{petId}/visits",
+      "gatewayPath": "/api/visit/owners/*/pets/{petId}/visits",
+      "componentId": "visits.web.VisitResource",
+      "handlerMethod": "create",
+      "microservice": "visits-service"
+    },
+    {
+      "method": "GET",
+      "path": "/owners/*/pets/{petId}/visits",
+      "gatewayPath": "/api/visit/owners/*/pets/{petId}/visits",
+      "componentId": "visits.web.VisitResource",
+      "handlerMethod": "read",
+      "microservice": "visits-service"
+    },
+    {
+      "method": "GET",
+      "path": "/pets/visits",
+      "gatewayPath": "/api/visit/pets/visits",
+      "componentId": "visits.web.VisitResource",
+      "handlerMethod": "read",
+      "microservice": "visits-service"
+    },
+    {
+      "method": "GET",
+      "path": "/api/gateway/owners/{ownerId}",
+      "gatewayPath": null,
+      "componentId": "api.boundary.web.ApiGatewayController",
+      "handlerMethod": "getOwnerDetails",
+      "microservice": "api-gateway"
+    }
+  ],
+  "events": {
+    "detected": false,
+    "scannedPatterns": [
+      "@KafkaListener",
+      "KafkaTemplate",
+      "@RabbitListener",
+      "RabbitTemplate",
+      "@JmsListener",
+      "JmsTemplate",
+      "@StreamListener",
+      "@EnableBinding",
+      "StreamBridge",
+      "ApplicationEventPublisher",
+      "@EventListener (excluding lifecycle)"
+    ],
+    "subscribers": [],
+    "publishers": [],
+    "placeholderMessage": "No asynchronous messaging detected. All inter-service communication is synchronous HTTP via the api-gateway. The only @EventListener match is a startup lifecycle hook in genai-service (VectorStoreController.loadVetDataToVectorStoreOnStartup) — not inter-service messaging."
+  },
+  "ownership": {
+    "codeowners": [],
+    "recentContributors": []
+  }
+}

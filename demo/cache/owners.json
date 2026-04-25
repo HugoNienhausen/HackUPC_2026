@@ -1,0 +1,631 @@
+{
+  "devmapVersion": "1.0.0",
+  "generatedAt": "2026-04-25T15:54:54.796Z",
+  "feature": {
+    "name": "owners",
+    "displayName": "Owners",
+    "summary": "The owners feature manages the full lifecycle of pet owner records across the microservices architecture, exposing CRUD endpoints in the customers-service and surfacing aggregated owner-plus-pet data through the API gateway. The gateway orchestrates reactive calls to the customers-service, which persists and retrieves Owner entities via Spring Data JPA, while the genai-service can also query and manipulate owner data through LLM-callable tools."
+  },
+  "repository": {
+    "name": "spring-petclinic-microservices",
+    "rootPath": "<repo>",
+    "language": "java",
+    "framework": "spring-boot",
+    "microservices": [
+      {
+        "name": "admin-server",
+        "module": "spring-petclinic-admin-server",
+        "port": 9090
+      },
+      {
+        "name": "api-gateway",
+        "module": "spring-petclinic-api-gateway",
+        "port": 8080
+      },
+      {
+        "name": "config-server",
+        "module": "spring-petclinic-config-server",
+        "port": 8888
+      },
+      {
+        "name": "customers-service",
+        "module": "spring-petclinic-customers-service",
+        "port": 8081
+      },
+      {
+        "name": "discovery-server",
+        "module": "spring-petclinic-discovery-server",
+        "port": 8761
+      },
+      {
+        "name": "genai-service",
+        "module": "spring-petclinic-genai-service",
+        "port": 8084
+      },
+      {
+        "name": "vets-service",
+        "module": "spring-petclinic-vets-service",
+        "port": 8083
+      },
+      {
+        "name": "visits-service",
+        "module": "spring-petclinic-visits-service",
+        "port": 8082
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "api.application.CustomersServiceClient",
+      "fqn": "org.springframework.samples.petclinic.api.application.CustomersServiceClient",
+      "simpleName": "CustomersServiceClient",
+      "kind": "client",
+      "microservice": "api-gateway",
+      "filePath": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/application/CustomersServiceClient.java",
+      "loc": 42,
+      "annotations": [
+        "@Component"
+      ],
+      "publicMethods": [],
+      "summary": "Fetches owner details from the customers-service using a reactive WebClient, enabling the API gateway to retrieve customer information for the owners feature.",
+      "core": true
+    },
+    {
+      "id": "customers.model.Owner",
+      "fqn": "org.springframework.samples.petclinic.customers.model.Owner",
+      "simpleName": "Owner",
+      "kind": "entity",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/model/Owner.java",
+      "loc": 143,
+      "annotations": [
+        "@Entity",
+        "@Table"
+      ],
+      "publicMethods": [],
+      "summary": "Represents a pet owner with contact information and manages their associated pets through a one-to-many relationship, providing sorted access to pets and validation of required fields.",
+      "core": true
+    },
+    {
+      "id": "customers.model.OwnerRepository",
+      "fqn": "org.springframework.samples.petclinic.customers.model.OwnerRepository",
+      "simpleName": "OwnerRepository",
+      "kind": "repository",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/model/OwnerRepository.java",
+      "loc": 31,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Provides Spring Data JPA persistence operations for Owner domain objects, enabling standard CRUD and query functionality with automatic method implementation based on naming conventions.",
+      "core": true
+    },
+    {
+      "id": "customers.web.OwnerResource",
+      "fqn": "org.springframework.samples.petclinic.customers.web.OwnerResource",
+      "simpleName": "OwnerResource",
+      "kind": "controller",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/OwnerResource.java",
+      "loc": 93,
+      "annotations": [
+        "@RequestMapping",
+        "@RestController",
+        "@Timed"
+      ],
+      "publicMethods": [
+        {
+          "name": "createOwner",
+          "signature": "createOwner(...)",
+          "annotations": [
+            "@PostMapping"
+          ],
+          "lineStart": 57
+        },
+        {
+          "name": "findOwner",
+          "signature": "findOwner(...)",
+          "annotations": [
+            "@GetMapping"
+          ],
+          "lineStart": 67
+        },
+        {
+          "name": "findAll",
+          "signature": "findAll(...)",
+          "annotations": [
+            "@GetMapping"
+          ],
+          "lineStart": 75
+        },
+        {
+          "name": "updateOwner",
+          "signature": "updateOwner(...)",
+          "annotations": [
+            "@PutMapping"
+          ],
+          "lineStart": 83
+        }
+      ],
+      "summary": "Exposes REST endpoints at /owners to create, retrieve, and update owner records, delegating persistence to OwnerRepository and using OwnerEntityMapper for request/model conversion.",
+      "core": true
+    },
+    {
+      "id": "api.boundary.web.ApiGatewayController",
+      "fqn": "org.springframework.samples.petclinic.api.boundary.web.ApiGatewayController",
+      "simpleName": "ApiGatewayController",
+      "kind": "controller",
+      "microservice": "api-gateway",
+      "filePath": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/boundary/web/ApiGatewayController.java",
+      "loc": 84,
+      "annotations": [
+        "@RestController",
+        "@RequestMapping"
+      ],
+      "publicMethods": [
+        {
+          "name": "getOwnerDetails",
+          "signature": "getOwnerDetails(...)",
+          "annotations": [
+            "@GetMapping"
+          ],
+          "lineStart": 54
+        }
+      ],
+      "summary": "Aggregates owner and pet visit data from downstream services via reactive clients, applying circuit breaker resilience to the visits lookup and merging results into a unified OwnerDetails response.",
+      "core": false
+    },
+    {
+      "id": "api.dto.OwnerDetails",
+      "fqn": "org.springframework.samples.petclinic.api.dto.OwnerDetails",
+      "simpleName": "OwnerDetails",
+      "kind": "dto",
+      "microservice": "api-gateway",
+      "filePath": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/dto/OwnerDetails.java",
+      "loc": 98,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Represents owner information including personal details and associated pets, providing a builder pattern for construction and a helper method to extract pet IDs for API responses.",
+      "core": false
+    },
+    {
+      "id": "customers.web.mapper.OwnerEntityMapper",
+      "fqn": "org.springframework.samples.petclinic.customers.web.mapper.OwnerEntityMapper",
+      "simpleName": "OwnerEntityMapper",
+      "kind": "mapper",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/mapper/OwnerEntityMapper.java",
+      "loc": 20,
+      "annotations": [
+        "@Component"
+      ],
+      "publicMethods": [],
+      "summary": "Maps incoming OwnerRequest data onto existing Owner entities by populating address, city, telephone, and name fields for the owners feature.",
+      "core": false
+    },
+    {
+      "id": "customers.web.OwnerRequest",
+      "fqn": "org.springframework.samples.petclinic.customers.web.OwnerRequest",
+      "simpleName": "OwnerRequest",
+      "kind": "other",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/OwnerRequest.java",
+      "loc": 15,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Captures validated owner registration data including name, address, and phone number for the owners feature in the customers-service microservice.",
+      "core": false
+    },
+    {
+      "id": "genai.AIDataProvider",
+      "fqn": "org.springframework.samples.petclinic.genai.AIDataProvider",
+      "simpleName": "AIDataProvider",
+      "kind": "service",
+      "microservice": "genai-service",
+      "filePath": "spring-petclinic-genai-service/src/main/java/org/springframework/samples/petclinic/genai/AIDataProvider.java",
+      "loc": 94,
+      "annotations": [
+        "@Service"
+      ],
+      "publicMethods": [],
+      "summary": "Provides LLM-invoked functions to query owner and vet data from the customers-service, including vector similarity search for vet matching and operations to add owners and pets to the system.",
+      "core": false
+    },
+    {
+      "id": "genai.dto.OwnerDetails",
+      "fqn": "org.springframework.samples.petclinic.genai.dto.OwnerDetails",
+      "simpleName": "OwnerDetails",
+      "kind": "dto",
+      "microservice": "genai-service",
+      "filePath": "spring-petclinic-genai-service/src/main/java/org/springframework/samples/petclinic/genai/dto/OwnerDetails.java",
+      "loc": 35,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Transfers owner information including personal details and associated pets between services in the genai-service microservice.",
+      "core": false
+    },
+    {
+      "id": "genai.PetclinicTools",
+      "fqn": "org.springframework.samples.petclinic.genai.PetclinicTools",
+      "simpleName": "PetclinicTools",
+      "kind": "other",
+      "microservice": "genai-service",
+      "filePath": "spring-petclinic-genai-service/src/main/java/org/springframework/samples/petclinic/genai/PetclinicTools.java",
+      "loc": 82,
+      "annotations": [
+        "@Component"
+      ],
+      "publicMethods": [],
+      "summary": "Exposes LLM-callable tools for managing pet clinic owners, pets, and veterinarians by delegating to an AIDataProvider backend service.",
+      "core": false
+    }
+  ],
+  "flow": {
+    "mermaid": "sequenceDiagram\n  participant Client\n  participant GW as ApiGatewayController\n  participant CSC as CustomersServiceClient\n  participant OR as OwnerResource\n  participant Mapper as OwnerEntityMapper\n  participant Repo as OwnerRepository\n  participant DB as Database\n\n  Client->>GW: GET /api/gateway/owners/{ownerId}\n  GW->>CSC: getOwner(ownerId)\n  CSC->>OR: GET /owners/{ownerId} (lb)\n  OR->>Repo: findById(ownerId)\n  Repo->>DB: SELECT * FROM owners WHERE id=?\n  DB-->>Repo: Owner row + pets\n  Repo-->>OR: Owner entity\n  OR-->>CSC: Owner JSON\n  CSC-->>GW: OwnerDetails (reactive Mono)\n  GW->>GW: merge into OwnerDetails DTO\n  GW-->>Client: OwnerDetails (owner + pets)",
+    "narrative": "A client calls GET /api/gateway/owners/{ownerId} on the ApiGatewayController, which orchestrates the aggregation flow. It delegates to CustomersServiceClient, a reactive WebClient wrapper, which load-balances an HTTP call to OwnerResource in the customers-service. OwnerResource invokes OwnerRepository to execute a JPA query, returning the Owner entity with its associated pets. The result is streamed back through the reactive pipeline and assembled into an OwnerDetails DTO before being returned to the caller.",
+    "steps": [
+      {
+        "index": 1,
+        "actor": "Client",
+        "action": "Sends GET /api/gateway/owners/{ownerId} to the API gateway",
+        "componentId": "api.boundary.web.ApiGatewayController",
+        "details": "Entry point; ApiGatewayController.getOwnerDetails() handles the request"
+      },
+      {
+        "index": 2,
+        "actor": "ApiGatewayController",
+        "action": "Delegates owner lookup to CustomersServiceClient",
+        "componentId": "api.application.CustomersServiceClient",
+        "details": "Reactive WebClient call initiated; load-balanced via Eureka (lb)"
+      },
+      {
+        "index": 3,
+        "actor": "CustomersServiceClient",
+        "action": "Issues HTTP GET /owners/{ownerId} to customers-service",
+        "componentId": "api.application.CustomersServiceClient",
+        "details": "Cross-service HTTP call; target resolved via service discovery"
+      },
+      {
+        "index": 4,
+        "actor": "OwnerResource",
+        "action": "Receives request and calls OwnerRepository.findById()",
+        "componentId": "customers.web.OwnerResource",
+        "details": "findOwner() handler dispatches to Spring Data JPA repository"
+      },
+      {
+        "index": 5,
+        "actor": "OwnerRepository",
+        "action": "Executes SELECT query against the database",
+        "componentId": "customers.model.OwnerRepository",
+        "details": "SELECT * FROM owners WHERE id=? with eager/lazy fetch of pets"
+      },
+      {
+        "index": 6,
+        "actor": "Database",
+        "action": "Returns owner row and associated pet records",
+        "componentId": "customers.model.Owner",
+        "details": "Owner entity populated with one-to-many pet collection, sorted"
+      },
+      {
+        "index": 7,
+        "actor": "OwnerResource",
+        "action": "Serializes Owner entity to JSON response",
+        "componentId": "customers.web.OwnerResource",
+        "details": "Returns HTTP 200 with owner payload to CustomersServiceClient"
+      },
+      {
+        "index": 8,
+        "actor": "CustomersServiceClient",
+        "action": "Delivers reactive Mono<OwnerDetails> to ApiGatewayController",
+        "componentId": "api.application.CustomersServiceClient",
+        "details": "Deserialized into api.dto.OwnerDetails via WebClient response mapping"
+      },
+      {
+        "index": 9,
+        "actor": "ApiGatewayController",
+        "action": "Assembles final OwnerDetails DTO and returns to client",
+        "componentId": "api.dto.OwnerDetails",
+        "details": "Builder pattern used to compose owner info and pet IDs into unified response"
+      }
+    ]
+  },
+  "dependencies": {
+    "nodes": [
+      {
+        "id": "api.application.CustomersServiceClient",
+        "label": "CustomersServiceClient",
+        "microservice": "api-gateway",
+        "kind": "client",
+        "loc": 42
+      },
+      {
+        "id": "customers.model.Owner",
+        "label": "Owner",
+        "microservice": "customers-service",
+        "kind": "entity",
+        "loc": 143
+      },
+      {
+        "id": "customers.model.OwnerRepository",
+        "label": "OwnerRepository",
+        "microservice": "customers-service",
+        "kind": "repository",
+        "loc": 31
+      },
+      {
+        "id": "customers.web.OwnerResource",
+        "label": "OwnerResource",
+        "microservice": "customers-service",
+        "kind": "controller",
+        "loc": 93
+      },
+      {
+        "id": "api.boundary.web.ApiGatewayController",
+        "label": "ApiGatewayController",
+        "microservice": "api-gateway",
+        "kind": "controller",
+        "loc": 84
+      },
+      {
+        "id": "api.dto.OwnerDetails",
+        "label": "OwnerDetails",
+        "microservice": "api-gateway",
+        "kind": "dto",
+        "loc": 98
+      },
+      {
+        "id": "customers.web.mapper.OwnerEntityMapper",
+        "label": "OwnerEntityMapper",
+        "microservice": "customers-service",
+        "kind": "mapper",
+        "loc": 20
+      },
+      {
+        "id": "customers.web.OwnerRequest",
+        "label": "OwnerRequest",
+        "microservice": "customers-service",
+        "kind": "other",
+        "loc": 15
+      },
+      {
+        "id": "genai.AIDataProvider",
+        "label": "AIDataProvider",
+        "microservice": "genai-service",
+        "kind": "service",
+        "loc": 94
+      },
+      {
+        "id": "genai.dto.OwnerDetails",
+        "label": "OwnerDetails",
+        "microservice": "genai-service",
+        "kind": "dto",
+        "loc": 35
+      },
+      {
+        "id": "genai.PetclinicTools",
+        "label": "PetclinicTools",
+        "microservice": "genai-service",
+        "kind": "other",
+        "loc": 82
+      }
+    ],
+    "edges": [
+      {
+        "from": "api.application.CustomersServiceClient",
+        "to": "customers-service",
+        "type": "http",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/java/org/springframework/samples/petclinic/api/application/CustomersServiceClient.java",
+        "sourceLine": 37
+      },
+      {
+        "from": "genai.AIDataProvider",
+        "to": "customers-service",
+        "type": "discovery",
+        "sourceFile": "spring-petclinic-genai-service/src/main/java/org/springframework/samples/petclinic/genai/AIDataProvider.java",
+        "sourceLine": 90
+      },
+      {
+        "from": "api-gateway",
+        "to": "vets-service",
+        "type": "gateway-route",
+        "label": "Path=/api/vet/** -> lb://vets-service",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/resources/application.yml"
+      },
+      {
+        "from": "api-gateway",
+        "to": "visits-service",
+        "type": "gateway-route",
+        "label": "Path=/api/visit/** -> lb://visits-service",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/resources/application.yml"
+      },
+      {
+        "from": "api-gateway",
+        "to": "customers-service",
+        "type": "gateway-route",
+        "label": "Path=/api/customer/** -> lb://customers-service",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/resources/application.yml"
+      },
+      {
+        "from": "api-gateway",
+        "to": "genai-service",
+        "type": "gateway-route",
+        "label": "Path=/api/genai/** -> lb://genai-service",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/resources/application.yml"
+      },
+      {
+        "from": "api.application.CustomersServiceClient",
+        "to": "api.dto.OwnerDetails",
+        "type": "import"
+      },
+      {
+        "from": "api.boundary.web.ApiGatewayController",
+        "to": "api.application.CustomersServiceClient",
+        "type": "import"
+      },
+      {
+        "from": "api.boundary.web.ApiGatewayController",
+        "to": "api.dto.OwnerDetails",
+        "type": "import"
+      },
+      {
+        "from": "customers.web.mapper.OwnerEntityMapper",
+        "to": "customers.model.Owner",
+        "type": "import"
+      },
+      {
+        "from": "customers.web.mapper.OwnerEntityMapper",
+        "to": "customers.web.OwnerRequest",
+        "type": "import"
+      },
+      {
+        "from": "customers.web.OwnerResource",
+        "to": "customers.web.mapper.OwnerEntityMapper",
+        "type": "import"
+      },
+      {
+        "from": "customers.web.OwnerResource",
+        "to": "customers.model.Owner",
+        "type": "import"
+      },
+      {
+        "from": "customers.web.OwnerResource",
+        "to": "customers.model.OwnerRepository",
+        "type": "import"
+      },
+      {
+        "from": "genai.AIDataProvider",
+        "to": "genai.dto.OwnerDetails",
+        "type": "import"
+      },
+      {
+        "from": "genai.PetclinicTools",
+        "to": "genai.dto.OwnerDetails",
+        "type": "import"
+      }
+    ]
+  },
+  "persistence": {
+    "mermaidER": "erDiagram\n  OWNER {\n    Integer id PK\n    String first_name\n    String last_name\n    String address\n    String city\n    String telephone\n    Set<Pet> pets\n  }",
+    "entities": [
+      {
+        "fqn": "org.springframework.samples.petclinic.customers.model.Owner",
+        "simpleName": "Owner",
+        "table": "owners",
+        "fields": [
+          {
+            "name": "id",
+            "type": "Integer",
+            "primaryKey": true
+          },
+          {
+            "name": "firstName",
+            "type": "String",
+            "column": "first_name"
+          },
+          {
+            "name": "lastName",
+            "type": "String",
+            "column": "last_name"
+          },
+          {
+            "name": "address",
+            "type": "String",
+            "column": "address"
+          },
+          {
+            "name": "city",
+            "type": "String",
+            "column": "city"
+          },
+          {
+            "name": "telephone",
+            "type": "String",
+            "column": "telephone"
+          },
+          {
+            "name": "pets",
+            "type": "Set<Pet>"
+          }
+        ]
+      }
+    ],
+    "operations": [
+      {
+        "entity": "Owner",
+        "method": "save(Owner)",
+        "inferredSql": "INSERT INTO owners (...) / UPDATE owners SET ... WHERE id = ?",
+        "custom": false
+      },
+      {
+        "entity": "Owner",
+        "method": "findById(Integer)",
+        "inferredSql": "SELECT v.* FROM owners v WHERE v.id = ?",
+        "custom": false
+      }
+    ]
+  },
+  "endpoints": [
+    {
+      "method": "POST",
+      "path": "/owners",
+      "gatewayPath": "/api/customer/owners",
+      "componentId": "customers.web.OwnerResource",
+      "handlerMethod": "createOwner",
+      "microservice": "customers-service"
+    },
+    {
+      "method": "GET",
+      "path": "/owners/{ownerId}",
+      "gatewayPath": "/api/customer/owners/{ownerId}",
+      "componentId": "customers.web.OwnerResource",
+      "handlerMethod": "findOwner",
+      "microservice": "customers-service"
+    },
+    {
+      "method": "GET",
+      "path": "/owners",
+      "gatewayPath": "/api/customer/owners",
+      "componentId": "customers.web.OwnerResource",
+      "handlerMethod": "findAll",
+      "microservice": "customers-service"
+    },
+    {
+      "method": "PUT",
+      "path": "/owners/{ownerId}",
+      "gatewayPath": "/api/customer/owners/{ownerId}",
+      "componentId": "customers.web.OwnerResource",
+      "handlerMethod": "updateOwner",
+      "microservice": "customers-service"
+    },
+    {
+      "method": "GET",
+      "path": "/api/gateway/owners/{ownerId}",
+      "gatewayPath": null,
+      "componentId": "api.boundary.web.ApiGatewayController",
+      "handlerMethod": "getOwnerDetails",
+      "microservice": "api-gateway"
+    }
+  ],
+  "events": {
+    "detected": false,
+    "scannedPatterns": [
+      "@KafkaListener",
+      "KafkaTemplate",
+      "@RabbitListener",
+      "RabbitTemplate",
+      "@JmsListener",
+      "JmsTemplate",
+      "@StreamListener",
+      "@EnableBinding",
+      "StreamBridge",
+      "ApplicationEventPublisher",
+      "@EventListener (excluding lifecycle)"
+    ],
+    "subscribers": [],
+    "publishers": [],
+    "placeholderMessage": "No asynchronous messaging detected. All inter-service communication is synchronous HTTP via the api-gateway. The only @EventListener match is a startup lifecycle hook in genai-service (VectorStoreController.loadVetDataToVectorStoreOnStartup) — not inter-service messaging."
+  },
+  "ownership": {
+    "codeowners": [],
+    "recentContributors": []
+  }
+}
