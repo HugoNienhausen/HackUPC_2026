@@ -16,6 +16,7 @@ import { summarizeComponents, applySummaries } from './llm/summarizeComponents.j
 import { applyIdentify, identifyFeature } from './llm/identifyFeature.js';
 import { reconstructFlow } from './llm/reconstructFlow.js';
 import { cacheLocation, readCache, writeCache } from './llm/cache.js';
+import { NOOP_PROGRESS, type Progress } from './progress.js';
 
 export interface OrchestrateOptions {
   feature: string;
@@ -28,6 +29,8 @@ export interface OrchestrateOptions {
   refresh?: boolean;
   /** Workspace root for cache writes — defaults to INIT_CWD or process.cwd(). */
   workspaceRoot?: string;
+  /** Phase progress reporter (TTY spinner / silent). Defaults to no-op. */
+  progress?: Progress;
 }
 
 async function loadGatewayRoutes(repoRoot: string): Promise<GatewayRouteSpec[]> {
@@ -79,13 +82,14 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
   const repo = path.resolve(opts.repo);
   const workspaceRoot = opts.workspaceRoot ?? process.env.INIT_CWD ?? process.cwd();
   const cacheLoc = cacheLocation(workspaceRoot, repo, opts.feature);
+  const progress = opts.progress ?? NOOP_PROGRESS;
 
   if (!opts.refresh) {
     const hit = await readCache<Feature>(cacheLoc);
     if (hit) {
       const parsed = FeatureSchema.safeParse(hit);
       if (parsed.success) {
-        process.stderr.write(`[devmap] cache hit: ${cacheLoc.file}\n`);
+        progress.info(`✓ Cache hit: ${cacheLoc.file}`);
         return parsed.data;
       }
       process.stderr.write(
@@ -94,8 +98,13 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
     }
   }
 
+  progress.start('Scanning Java sources…');
   const idx = await runIndex(repo);
+  progress.succeed(
+    `Indexed ${idx.classes.length} classes across ${idx.microservices.length} services ({t})`,
+  );
 
+  progress.start(`Identifying components for "${opts.feature}"…`);
   const matches = lexicalMatch(idx.classes, opts.feature);
   const seedFqns = new Set(matches.map((m) => m.fqn));
   const expandResult = expand(seedFqns, idx.classes, idx.edges, opts.depth);
@@ -144,12 +153,26 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
     seedFqns: coreFqns,
     expandedFqns: peripheryFqns,
   });
+  const coreCount = components0.filter((c) => c.core).length;
+  const peripheryCount = components0.length - coreCount;
+  progress.succeed(
+    `Located ${coreCount} core + ${peripheryCount} periphery candidates ({t})`,
+  );
 
+  progress.start('Building dependency graph…');
   const dependencies = buildDependencies({
     components: components0,
     classes: idx.classes,
     edges: idx.edges,
   });
+  const crossServiceEdges = dependencies.edges.filter((e: { from: string; to: string }) => {
+    const from = components0.find((c) => c.id === e.from)?.microservice;
+    const to = components0.find((c) => c.id === e.to)?.microservice;
+    return Boolean(from && to && from !== to);
+  }).length;
+  progress.succeed(
+    `Mapped ${dependencies.edges.length} edges (${crossServiceEdges} cross-service) ({t})`,
+  );
 
   const gatewayRoutes = await loadGatewayRoutes(repo);
   const endpoints = buildEndpoints({
@@ -158,10 +181,21 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
     gatewayRoutes,
   });
 
+  progress.start('Detecting persistence model…');
   const persistence = buildPersistence({
     components: components0,
     classes: idx.classes,
   });
+  type EntityField = { relation?: { kind: string } | null };
+  type EntityRow = { fields: EntityField[] };
+  const fkByValueCount = (persistence.entities as EntityRow[]).reduce(
+    (acc: number, e: EntityRow) =>
+      acc + e.fields.filter((f) => f.relation?.kind === 'ForeignKeyByValue').length,
+    0,
+  );
+  progress.succeed(
+    `Found ${persistence.entities.length} entities, ${fkByValueCount} cross-service FKs ({t})`,
+  );
 
   const featureName = opts.feature;
   const displayName =
@@ -173,6 +207,7 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
     summary: `Auto-generated structural artifact for the "${featureName}" feature.`,
   };
 
+  progress.start('Generating component summaries (Claude Haiku, parallel)…');
   const summaries = await summarizeComponents({
     components: components0,
     classes: idx.classes,
@@ -181,6 +216,7 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
     client: llm,
   });
   let components = applySummaries(components0, summaries);
+  progress.succeed(`Wrote ${summaries.size} summaries ({t})`);
 
   // Structural flow first — used as the fallback for reconstructFlow.
   const structuralFlow = buildFlow({
@@ -188,6 +224,7 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
     edges: dependencies.edges,
   });
 
+  progress.start('Reconstructing request flow (Claude Sonnet)…');
   // Send ALL in-scope components (core + periphery) to reconstructFlow.
   // Periphery classes can still be on the request path — e.g. ApiGatewayController
   // orchestrates the visits aggregation despite being classified periphery for
@@ -214,6 +251,12 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
 
   if (reconstructed?.featureSummary) {
     featureMeta = { ...featureMeta, summary: reconstructed.featureSummary };
+  }
+
+  if (reconstructed) {
+    progress.succeed(`Generated narrative + sequence ({t})`);
+  } else {
+    progress.succeed(`Used structural fallback ({t})`);
   }
 
   const events = buildEvents();

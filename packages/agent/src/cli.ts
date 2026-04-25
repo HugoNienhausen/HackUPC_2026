@@ -15,6 +15,7 @@ import { FeatureSchema, type Feature } from '@devmap/schema';
 import { runIndex } from './index/runIndex.js';
 import { orchestrate } from './orchestrator.js';
 import { startServer } from './serve.js';
+import { pickProgress } from './progress.js';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPO = '/Users/hugonienhausen/Desktop/spring-petclinic-microservices';
@@ -76,6 +77,8 @@ program
       },
     ) => {
       const start = Date.now();
+      const tty = Boolean(process.stderr.isTTY);
+      const progress = pickProgress({ airplane: opts.airplane === true, tty });
       let artifact: Feature;
       if (opts.airplane) {
         const cached = await loadDemoCache(name);
@@ -98,6 +101,7 @@ program
           serve: opts.serve ?? false,
           refresh: opts.refresh ?? false,
           workspaceRoot: workspaceRoot(),
+          progress,
         });
       }
 
@@ -108,9 +112,15 @@ program
         process.stdout.write(json + '\n');
       } else {
         await fs.writeFile(path.resolve(baseCwd, out), json, 'utf8');
-        process.stderr.write(
-          `feature.json: ${artifact.components.length} components, ${artifact.dependencies.edges.length} edges, ${artifact.endpoints.length} endpoints, ${artifact.persistence.entities.length} entities in ${Date.now() - start}ms -> ${out}\n`,
-        );
+        const elapsed = Date.now() - start;
+        const stamp = elapsed < 1000 ? `${elapsed}ms` : `${(elapsed / 1000).toFixed(1)}s`;
+        if (!opts.airplane && tty) {
+          progress.info(`✓ feature.json ready in ${stamp}`);
+        } else {
+          process.stderr.write(
+            `feature.json: ${artifact.components.length} components, ${artifact.dependencies.edges.length} edges, ${artifact.endpoints.length} endpoints, ${artifact.persistence.entities.length} entities in ${elapsed}ms -> ${out}\n`,
+          );
+        }
       }
 
       if (opts.serve === false) return;
@@ -122,6 +132,9 @@ program
         webPort: opts.portWeb,
         openBrowser: opts.open ?? true,
       });
+      if (!opts.airplane && tty) {
+        progress.info(`→ Opening dashboard at ${handles.webUrl}`);
+      }
       process.stderr.write(
         `dashboard: ${handles.webUrl}  (api: ${handles.apiUrl})\n` +
           `press Ctrl+C to stop.\n`,
