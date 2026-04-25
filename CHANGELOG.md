@@ -2,6 +2,47 @@
 
 All notable changes to devmap. Format loosely follows Keep a Changelog; phases match [PLAN.md](./PLAN.md).
 
+## [0.4.0] — 2026-04-25 — **MVP cut line**
+
+### Phase 4a — Frontend MVP: Vite + React Flow + Express
+
+`devmap feature visits` now ends with a browser opened at `http://localhost:5173/` showing a polished dashboard. Two-process model: Vite serves the SPA on `:5173` with hot reload; Express serves the data API on `:3000`; Vite proxies `/feature.json` and `/repo/*` to Express so the SPA fetches same-origin URLs.
+
+- **`packages/web/`** — shadcn/ui (Vite template, Radix base, Nova preset) + Tailwind v4 (`@tailwindcss/vite`). Six shadcn primitives installed: `sheet`, `button`, `input`, `select`, `card`, `badge`. Graph deps: `@xyflow/react` (React Flow v12), `dagre` + `@types/dagre`, `lucide-react`. `@/*` path alias wired in `tsconfig.app.json` and `vite.config.ts`. Vite config also proxies `/feature.json` and `/repo/*` to `:3000`.
+- **`web/src/App.tsx`** — three-region layout: header (feature displayName + summary + microservice `Badge` chips with left-border accents from the stable palette), 48-px-wide left sidebar with 6 tabs (Workflow / GitGraph / Database / Network / Radio / LayoutGrid lucide icons), main panel routing to the active tab via `useState`. `useFeature()` hook in `lib/featureClient.ts` fetches `/feature.json` with loading + error states.
+- **`web/src/tabs/Dependencies.tsx`** — the centerpiece. React Flow with custom `ServiceNode` (rounded card, simpleName lg, "<kind> · <microservice>" muted subtitle, 4 px left border in the microservice color, size scaled from `loc` clamped 100×40 → 200×80). `dagre` LR auto-layout on mount; users can still drag nodes. Microservice filter dropdown (top-right, shadcn `Select`) hides nodes from other services and prunes dangling edges. Click on a node opens the shadcn `Sheet` from the right with FQN, kind/microservice/core badges, summary, annotation list, public methods (signature + mapping annotation if any), file path. Edge styling lives in a single `EDGE_STYLES` const that node code, edge styling, and the in-canvas `EdgeLegend` all read from. Background grid + pannable+zoomable MiniMap + Controls.
+- **`web/src/tabs/{Flow,Persistence,Api,Events,Components}.tsx`** — typed empty states (lucide icon + heading + one-line description from the brief + "Coming up — Phase 4b" footer), all rendered through a shared `TabPlaceholder` Card. Feels intentional, not broken.
+- **`agent/src/serve.ts`** — `buildApp(feature, repoRoot)` Express factory with three routes: `GET /feature.json` (200 + `Cache-Control: no-cache` + JSON body), `GET /repo/*splat` (sendFile within repoRoot, path-traversal guard, stub for the Phase 4b "Open in VS Code" deep-links), `GET /health`. `startServer(opts)` listens Express, spawns Vite as a child process on `:5173` (`--strictPort` so port collisions fail loudly), waits for Vite to be ready, opens browser via the `open` package, returns a `stop()` that cleans up both. ESM-aware module location via `fileURLToPath(import.meta.url)`.
+- **`agent/src/cli.ts`** — `feature <name>` default behavior is now: orchestrate → write `feature.json` → boot servers → open browser → wait for SIGINT. New flags: `--port-server <n>` (3000), `--port-web <n>` (5173), `--no-open` (server still runs, browser doesn't auto-open), `--no-serve` (Phase 3.5 behavior — exit after JSON write).
+
+### Edge styling rule (documented as PLAN.md §1.4 didn't specify)
+
+`EDGE_STYLES` const in `tabs/edgeStyles.ts` is the single source of truth. Color signals "crosses service boundary"; line style signals mechanism within cross-service:
+
+| `edge.type`       | stroke              | width | dasharray |
+|-------------------|---------------------|-------|-----------|
+| `import`          | slate-400 (`#94a3b8`) | 1     | (solid)   |
+| `http`            | indigo-500 (`#6366f1`) | 2.5   | (solid, animated) |
+| `discovery`       | indigo-500 (`#6366f1`) | 2     | `6 4`     |
+| `gateway-route`   | indigo-500 (`#6366f1`) | 2     | `2 4`     |
+
+The in-canvas `EdgeLegend` (top-left of the Dependencies canvas) renders 4 mini line samples + names so judges read the encoding at a glance.
+
+### Tests
+
+`pnpm -F @devmap/agent test` — 95 passed + 1 skipped across 19 files (3 new in Phase 4a):
+
+- `serve.test.ts` — 3 supertest cases: `/feature.json` shape, `/health` probe, `/repo/..` path-traversal rejection.
+- Frontend tests intentionally not added per PLAN.md §3.4 — manual click-through is the test.
+
+### Acceptance — PLAN.md §2 Phase 4a
+
+- ✅ `pnpm devmap feature visits` ends with browser open at `http://localhost:5173/`.
+- ✅ Dependencies tab renders with PetClinic data — 10 components + cross-service edges with distinct line styles.
+- ✅ Click on `VisitResource` node → Sheet opens with the 3 endpoints visible (POST, GET, GET).
+- ✅ Filter to `visits-service` hides api-gateway nodes and prunes their incident edges.
+- ✅ Other tabs render typed `TabPlaceholder` cards (icon + heading + one-line description + "Coming up — Phase 4b") so the UI feels in-progress, not broken.
+
 ## [0.3.5] — 2026-04-25
 
 ### Phase 3.5 — Minimal LLM: per-component summaries
