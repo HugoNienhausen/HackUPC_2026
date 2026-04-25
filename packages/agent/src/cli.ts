@@ -1,7 +1,15 @@
 #!/usr/bin/env node
+import { config as dotenvConfig } from 'dotenv';
+import path from 'node:path';
+
+// Load .env from the workspace root before any other module reads process.env.
+// pnpm -F changes cwd to packages/agent, so .env from this dir would miss the
+// repo-root file; INIT_CWD holds the original invocation cwd.
+const envBase = process.env.INIT_CWD ?? process.cwd();
+dotenvConfig({ path: path.resolve(envBase, '.env'), quiet: true });
+
 import { Command } from 'commander';
 import { promises as fs } from 'node:fs';
-import path from 'node:path';
 import { runIndex } from './index/runIndex.js';
 import { orchestrate } from './orchestrator.js';
 
