@@ -66,7 +66,7 @@ describe('expand — controller-targeted cross-service rule', () => {
     expect(adj.get('b.BDto')).toBeUndefined();
   });
 
-  it('gateway-route: ApiGatewayController (origin heuristic) reaches controllers of target service at depth=1', () => {
+  it('gateway-route: routed controller can step INTO origin at depth=1; origin does NOT extend back out (asymmetric)', () => {
     const classes = [
       mk({
         fqn: 'gw.ApiGatewayController',
@@ -81,19 +81,28 @@ describe('expand — controller-targeted cross-service rule', () => {
         kind: 'controller',
       }),
       mk({ fqn: 'v.VisitResource', simpleName: 'VisitResource', microservice: 'visits-service', kind: 'controller' }),
-      mk({ fqn: 'v.Visit', simpleName: 'Visit', microservice: 'visits-service', kind: 'entity' }),
+      mk({ fqn: 'c.PetResource', simpleName: 'PetResource', microservice: 'customers-service', kind: 'controller' }),
     ];
     const edges: Edge[] = [
       { from: 'api-gateway', to: 'visits-service', type: 'gateway-route' },
+      { from: 'api-gateway', to: 'customers-service', type: 'gateway-route' },
     ];
     const origin = pickGatewayOriginClass(classes);
     expect(origin?.fqn).toBe('gw.ApiGatewayController');
 
     const adj = buildAdjacency(classes, edges);
-    expect([...adj.get('gw.ApiGatewayController')!].sort()).toEqual(['v.VisitResource']);
-    // Depth=1 from a visits-service controller seed reaches AGC, not Visit (entity, not controller, no edge).
-    const r = expand(['v.VisitResource'], classes, edges, 1);
-    expect([...r.expanded].sort()).toEqual(['gw.ApiGatewayController']);
+    // VR can step into AGC (gateway-route incoming).
+    expect([...(adj.get('v.VisitResource') ?? new Set())].sort()).toEqual([
+      'gw.ApiGatewayController',
+    ]);
+    // AGC has no outgoing gateway-route edges — won't bridge to PetResource.
+    expect(adj.get('gw.ApiGatewayController')).toBeUndefined();
+
+    // Depth=1 from VR reaches AGC; depth=2 from VR does NOT reach PetResource.
+    const r1 = expand(['v.VisitResource'], classes, edges, 1);
+    expect([...r1.expanded].sort()).toEqual(['gw.ApiGatewayController']);
+    const r2 = expand(['v.VisitResource'], classes, edges, 2);
+    expect([...r2.expanded].sort()).toEqual(['gw.ApiGatewayController']);
   });
 
   it('pickGatewayOriginClass falls back to alphabetically-first controller if none contain "gateway"', () => {

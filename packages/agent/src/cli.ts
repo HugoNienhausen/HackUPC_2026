@@ -3,6 +3,10 @@ import { Command } from 'commander';
 import { promises as fs } from 'node:fs';
 import path from 'node:path';
 import { runIndex } from './index/runIndex.js';
+import { lexicalMatch } from './feature/lexicalMatch.js';
+import { expand } from './feature/expand.js';
+
+const DEFAULT_REPO = '/Users/hugonienhausen/Desktop/spring-petclinic-microservices';
 
 const program = new Command();
 
@@ -13,11 +17,35 @@ program
 
 program
   .command('feature <name>')
-  .description('Build the feature.json artifact for <name>')
-  .option('--no-llm', 'Skip LLM calls; emit deterministic placeholders')
-  .option('--no-serve', 'Emit JSON only; do not open browser')
-  .action((name: string) => {
-    console.log(`devmap feature: not implemented (requested feature: "${name}")`);
+  .description('Resolve a feature name to a candidate class list (lexical + 1-hop expansion)')
+  .option('--repo <path>', 'path to the microservices repo', DEFAULT_REPO)
+  .option('--depth <n>', 'BFS expansion depth', (v) => parseInt(v, 10), 2)
+  .option('--no-llm', 'Skip LLM calls (placeholder for Phase 3+)')
+  .option('--no-serve', 'Emit JSON only; do not open browser (placeholder for Phase 4+)')
+  .action(async (name: string, opts: { repo: string; depth: number }) => {
+    const idx = await runIndex(opts.repo);
+    const matches = lexicalMatch(idx.classes, name);
+    const result = expand(
+      matches.map((m) => m.fqn),
+      idx.classes,
+      idx.edges,
+      opts.depth,
+    );
+    const scoreByFqn = new Map(matches.map((m) => [m.fqn, m.score]));
+    const total = result.seed.size + result.expanded.size;
+    process.stdout.write(
+      `feature: ${name}  —  ${result.seed.size} seed + ${result.expanded.size} expanded (depth=${opts.depth}) = ${total} candidates\n`,
+    );
+    const services = [...result.byService.keys()].sort();
+    for (const svc of services) {
+      const fqns = result.byService.get(svc) ?? [];
+      process.stdout.write(`\n  ${svc}  (${fqns.length}):\n`);
+      for (const fqn of fqns) {
+        const score = scoreByFqn.get(fqn);
+        const label = score !== undefined ? `seed, score=${score}` : 'expanded';
+        process.stdout.write(`    ${fqn.padEnd(78)}  [${label}]\n`);
+      }
+    }
   });
 
 program

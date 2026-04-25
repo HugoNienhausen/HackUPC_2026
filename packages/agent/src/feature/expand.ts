@@ -42,20 +42,22 @@ export function buildAdjacency(
   }
 
   const adj = new Map<string, Set<string>>();
-  const link = (a: string, b: string) => {
+  const linkOne = (a: string, b: string) => {
     if (!eligible.has(a) || !eligible.has(b)) return;
     if (a === b) return;
     if (!adj.has(a)) adj.set(a, new Set());
-    if (!adj.has(b)) adj.set(b, new Set());
     adj.get(a)!.add(b);
-    adj.get(b)!.add(a);
+  };
+  const linkBoth = (a: string, b: string) => {
+    linkOne(a, b);
+    linkOne(b, a);
   };
 
   for (const e of edges) {
     if (e.type !== 'import' || !e.via) continue;
     const m = e.via.match(/^(\S+) -> (\S+)$/);
     if (!m) continue;
-    link(m[1]!, m[2]!);
+    linkBoth(m[1]!, m[2]!);
   }
 
   for (const e of edges) {
@@ -63,15 +65,19 @@ export function buildAdjacency(
     const sourceFqn = e.sourceFile ? fqnByFile.get(e.sourceFile) : undefined;
     if (!sourceFqn) continue;
     const targets = controllersByService.get(e.to) ?? [];
-    for (const t of targets) link(sourceFqn, t);
+    for (const t of targets) linkBoth(sourceFqn, t);
   }
 
+  // gateway-route: ASYMMETRIC — controller → origin only.
+  // Symmetric semantics let AGC bridge unrelated routed services at depth=2
+  // (e.g. visits-service VR -> AGC -> customers-service PetResource leaks
+  // an expectedAbsent class). Routed controllers can still step into AGC.
   const origin = pickGatewayOriginClass(classes);
   if (origin) {
     for (const e of edges) {
       if (e.type !== 'gateway-route') continue;
       const targets = controllersByService.get(e.to) ?? [];
-      for (const t of targets) link(origin.fqn, t);
+      for (const t of targets) linkOne(t, origin.fqn);
     }
   }
 
@@ -82,7 +88,7 @@ export function expand(
   seedFqns: Iterable<string>,
   classes: ClassRecord[],
   edges: Edge[],
-  depth = 1,
+  depth = 2,
 ): ExpandResult {
   const eligible = new Set(classes.filter(isEligible).map((c) => c.fqn));
   const seed = new Set<string>();
