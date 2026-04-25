@@ -141,7 +141,7 @@ export default function App() {
       case 'persistence':
         return <PersistenceTab feature={feature} />;
       case 'api':
-        return <ApiTab />;
+        return <ApiTab feature={feature} />;
       case 'events':
         return <EventsTab />;
       case 'components':
