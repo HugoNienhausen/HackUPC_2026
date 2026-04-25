@@ -25,16 +25,38 @@ function buildAbsolutePath(rootPath: string | undefined, relPath: string): strin
   return `${trimmedRoot}/${trimmedRel}`;
 }
 
+/**
+ * The pre-warmed demo cache scrubs rootPath to a placeholder like "<repo>"
+ * so it doesn't leak the dev's home directory when committed. When that
+ * placeholder is detected we render the editor buttons as disabled with
+ * a tooltip rather than emitting broken vscode:// links.
+ */
+function isAirplaneRootPath(rootPath: string | undefined): boolean {
+  if (!rootPath) return false;
+  return rootPath.startsWith('<') || !rootPath.startsWith('/');
+}
+
 function buildEditorUrl(scheme: 'vscode' | 'cursor', absPath: string, line?: number): string {
   const lineSuffix = line && line > 0 ? `:${line}` : '';
   return `${scheme}://file${absPath.startsWith('/') ? absPath : `/${absPath}`}${lineSuffix}`;
 }
 
-function OpenInEditor({ absPath, line }: { absPath: string; line?: number }) {
+function OpenInEditor({
+  absPath,
+  relPath,
+  line,
+  airplane,
+}: {
+  absPath: string;
+  relPath: string;
+  line?: number;
+  airplane: boolean;
+}) {
   const [copied, setCopied] = useState(false);
+  const targetForCopy = airplane ? relPath : absPath;
   const onCopy = async () => {
     try {
-      await navigator.clipboard.writeText(absPath);
+      await navigator.clipboard.writeText(targetForCopy);
       setCopied(true);
       setTimeout(() => setCopied(false), 1200);
     } catch {
@@ -43,21 +65,43 @@ function OpenInEditor({ absPath, line }: { absPath: string; line?: number }) {
   };
   const vsUrl = buildEditorUrl('vscode', absPath, line);
   const cursorUrl = buildEditorUrl('cursor', absPath, line);
+  const disabledTooltip = 'Disabled in airplane mode (demo cache has no absolute path)';
   return (
     <div className="space-y-2">
       <div className="flex items-center gap-2">
-        <Button asChild size="sm" className="gap-1.5">
-          <a href={vsUrl}>
-            <ExternalLink className="h-3.5 w-3.5" />
-            Open in VS Code
-          </a>
-        </Button>
-        <Button asChild size="sm" variant="outline" className="gap-1.5">
-          <a href={cursorUrl}>
-            <ExternalLink className="h-3.5 w-3.5" />
-            Cursor
-          </a>
-        </Button>
+        {airplane ? (
+          <>
+            <Button size="sm" disabled className="gap-1.5" title={disabledTooltip}>
+              <ExternalLink className="h-3.5 w-3.5" />
+              Open in VS Code
+            </Button>
+            <Button
+              size="sm"
+              variant="outline"
+              disabled
+              className="gap-1.5"
+              title={disabledTooltip}
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              Cursor
+            </Button>
+          </>
+        ) : (
+          <>
+            <Button asChild size="sm" className="gap-1.5">
+              <a href={vsUrl}>
+                <ExternalLink className="h-3.5 w-3.5" />
+                Open in VS Code
+              </a>
+            </Button>
+            <Button asChild size="sm" variant="outline" className="gap-1.5">
+              <a href={cursorUrl}>
+                <ExternalLink className="h-3.5 w-3.5" />
+                Cursor
+              </a>
+            </Button>
+          </>
+        )}
         <Button size="sm" variant="ghost" className="gap-1.5" onClick={onCopy}>
           {copied ? (
             <>
@@ -73,9 +117,12 @@ function OpenInEditor({ absPath, line }: { absPath: string; line?: number }) {
         </Button>
       </div>
       <code className="block break-all rounded bg-muted/50 px-2 py-1 font-mono text-[10px] text-muted-foreground">
-        {absPath}
+        {relPath}
         {line && line > 0 ? `:${line}` : ''}
       </code>
+      {airplane && (
+        <p className="text-[10px] text-muted-foreground">{disabledTooltip}</p>
+      )}
     </div>
   );
 }
@@ -84,6 +131,7 @@ export function ComponentSheet({ component, rootPath, onOpenChange }: Props) {
   const open = component !== null;
   const absPath = component ? buildAbsolutePath(rootPath, component.filePath) : '';
   const line = component?.lineStart;
+  const airplane = isAirplaneRootPath(rootPath);
 
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
@@ -167,7 +215,12 @@ export function ComponentSheet({ component, rootPath, onOpenChange }: Props) {
                 <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
                   Source
                 </h3>
-                <OpenInEditor absPath={absPath} line={line} />
+                <OpenInEditor
+                  absPath={absPath}
+                  relPath={component.filePath}
+                  line={line}
+                  airplane={airplane}
+                />
               </section>
             </div>
           </>
