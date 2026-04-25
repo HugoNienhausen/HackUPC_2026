@@ -1,6 +1,6 @@
 node_modules
 dist
-.devmap/cache
+.devmap/
 *.log
 .DS_Store
 .env
