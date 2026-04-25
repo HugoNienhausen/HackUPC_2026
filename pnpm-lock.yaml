@@ -64,6 +64,9 @@ importers:
 
   packages/web:
     dependencies:
+      '@devmap/schema':
+        specifier: workspace:*
+        version: link:../schema
       '@fontsource-variable/geist':
         specifier: ^5.2.8
         version: 5.2.8
@@ -100,6 +103,9 @@ importers:
       tw-animate-css:
         specifier: ^1.4.0
         version: 1.4.0
+      zod:
+        specifier: ^3.25.76
+        version: 3.25.76
     devDependencies:
       '@eslint/js':
         specifier: ^10.0.1
