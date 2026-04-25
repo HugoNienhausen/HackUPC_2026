@@ -13,9 +13,15 @@ import { promises as fs } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { FeatureSchema, type Feature } from '@devmap/schema';
 import { runIndex } from './index/runIndex.js';
-import { orchestrate } from './orchestrator.js';
+import { orchestrate, orchestrateUseCase, UseCaseNotFoundError } from './orchestrator.js';
 import { startServer } from './serve.js';
 import { pickProgress } from './progress.js';
+import { LlmClient } from './llm/client.js';
+import { discoverUseCasesCached, type EndpointLike } from './llm/discoverUseCases.js';
+import { buildComponents } from './views/components.js';
+import { buildEndpoints, type GatewayRouteSpec } from './views/endpoints.js';
+import { extractGatewayRoutesFromYaml } from './index/edges.js';
+import type { Endpoint } from '@devmap/schema';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPO = '/Users/hugonienhausen/Desktop/spring-petclinic-microservices';
@@ -93,16 +99,34 @@ program
           `[devmap] airplane mode: loaded demo/cache/${name}.json (${artifact.components.length} components) in ${Date.now() - start}ms\n`,
         );
       } else {
-        artifact = await orchestrate({
-          feature: name,
-          repo: opts.repo,
-          depth: opts.depth,
-          llm: opts.llm ?? false,
-          serve: opts.serve ?? false,
-          refresh: opts.refresh ?? false,
-          workspaceRoot: workspaceRoot(),
-          progress,
-        });
+        try {
+          artifact = await orchestrateUseCase({
+            useCaseId: name,
+            repo: opts.repo,
+            llm: opts.llm ?? false,
+            refresh: opts.refresh ?? false,
+            workspaceRoot: workspaceRoot(),
+            progress,
+          });
+        } catch (err) {
+          if (err instanceof UseCaseNotFoundError) {
+            const list =
+              err.available.length > 0
+                ? '\n  - ' + err.available.join('\n  - ') + '\n'
+                : '\n  (no use-cases discovered yet)\n';
+            process.stderr.write(
+              `[devmap] use-case "${err.useCaseId}" not found.\n` +
+                `Run \`devmap discover --repo ${opts.repo}\` to see the available ids.\n` +
+                `Currently known:${list}`,
+            );
+            process.exit(2);
+          }
+          throw err;
+        }
+        // satisfies the "always assigned" check below.
+        if (!artifact!) {
+          throw new Error('orchestrateUseCase returned without an artifact');
+        }
       }
 
       const json = JSON.stringify(artifact, null, 2);
@@ -149,6 +173,119 @@ program
       process.on('SIGTERM', () => {
         shutdown().catch(() => process.exit(1));
       });
+    },
+  );
+
+async function loadGatewayRoutes(repoRoot: string): Promise<GatewayRouteSpec[]> {
+  const ymlPath = path.join(
+    repoRoot,
+    'spring-petclinic-api-gateway',
+    'src',
+    'main',
+    'resources',
+    'application.yml',
+  );
+  try {
+    const text = await fs.readFile(ymlPath, 'utf8');
+    return extractGatewayRoutesFromYaml(text).map((r) => ({
+      target: r.target,
+      predicates: r.predicates,
+    }));
+  } catch {
+    return [];
+  }
+}
+
+function endpointToLike(e: Endpoint, controllerName: string): EndpointLike {
+  return {
+    method: e.method,
+    path: e.path,
+    handler: `${controllerName}.${e.handlerMethod}`,
+    microservice: e.microservice,
+    gatewayPath: e.gatewayPath ?? null,
+  };
+}
+
+program
+  .command('discover')
+  .description('Enumerate the use-cases in a repo (Sonnet 4.6).')
+  .option('--repo <path>', 'path to the microservices repo', DEFAULT_REPO)
+  .option('--refresh', 'Force re-call; bypass cache')
+  .option('--no-llm', "Skip LLM (returns empty list — discover requires Sonnet)")
+  .option('--json', 'Emit machine-readable JSON instead of pretty rows')
+  .action(
+    async (opts: { repo: string; refresh?: boolean; llm?: boolean; json?: boolean }) => {
+      const repo = path.resolve(opts.repo);
+      const idx = await runIndex(repo);
+
+      // Synthetic full-component set so buildEndpoints can iterate every
+      // controller. seedFqns = every fqn so all classes appear; expandedFqns
+      // is empty.
+      const allFqns = new Set(idx.classes.map((c) => c.fqn));
+      const allComponents = buildComponents({
+        classes: idx.classes,
+        seedFqns: allFqns,
+        expandedFqns: new Set(),
+      });
+      const compById = new Map(allComponents.map((c) => [c.id, c]));
+      const gatewayRoutes = await loadGatewayRoutes(repo);
+      const endpoints = buildEndpoints({
+        components: allComponents,
+        classes: idx.classes,
+        gatewayRoutes,
+      });
+      const endpointLikes: EndpointLike[] = endpoints.map((e) => {
+        const ctrl = compById.get(e.componentId)?.simpleName ?? e.componentId;
+        return endpointToLike(e, ctrl);
+      });
+
+      const llm = new LlmClient({ noLlm: opts.llm === false });
+      const result = await discoverUseCasesCached({
+        classes: idx.classes,
+        microservices: idx.microservices.map((m) => ({ name: m })),
+        endpoints: endpointLikes,
+        edges: idx.edges,
+        client: llm,
+        workspaceRoot: workspaceRoot(),
+        repoPath: repo,
+        refresh: opts.refresh ?? false,
+      });
+
+      if (!result) {
+        process.stderr.write(
+          '[devmap] discover: no result. Live LLM is required (set ANTHROPIC_API_KEY) and avoid --no-llm.\n',
+        );
+        process.exit(2);
+      }
+
+      if (opts.json) {
+        process.stdout.write(JSON.stringify(result, null, 2) + '\n');
+        return;
+      }
+
+      const rows = result.useCases;
+      if (rows.length === 0) {
+        process.stderr.write('[devmap] discover: 0 use-cases returned.\n');
+        return;
+      }
+      process.stdout.write(
+        `\nFound ${rows.length} use-case${rows.length === 1 ? '' : 's'}:\n\n`,
+      );
+      const idWidth = Math.min(
+        Math.max(...rows.map((r) => r.id.length), 'id'.length),
+        40,
+      );
+      for (const u of rows) {
+        const tag = u.complexity === 'cross-service' ? '×' : '·';
+        process.stdout.write(
+          `  ${tag} ${u.id.padEnd(idWidth)}  ${u.entryEndpoint}\n` +
+            `      ${u.summary}\n` +
+            `      [${u.entryController} @ ${u.entryMicroservice}]\n\n`,
+        );
+      }
+      process.stdout.write(
+        `Run \`devmap feature <id>\` to open the dashboard for any of these.\n`,
+      );
     },
   );
 
