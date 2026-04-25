@@ -2,6 +2,37 @@
 
 All notable changes to devmap. Format loosely follows Keep a Changelog; phases match [PLAN.md](./PLAN.md).
 
+## [0.3.5] — 2026-04-25
+
+### Phase 3.5 — Minimal LLM: per-component summaries
+
+Replaces the `[summary pending — phase 3.5]` placeholder string on every component with a real Haiku-generated 1–2-sentence summary. Wall-clock end-to-end: ~3.2 s on a cold run with 10 components (live test 2.3 s for the LLM portion alone — under the 2 s ideal but well inside the 10 s budget).
+
+- **`agent/src/llm/client.ts`** — `LlmClient` wraps `@anthropic-ai/sdk` with the four Phase 3.5 mandates: 429-retry exponential backoff (max 3 attempts, base 500 ms), `cache_control: { type: "ephemeral" }` injection on a passed-in `cachedSystem` string, `--no-llm` short-circuit (returns `null` from `complete()`), and a single-warning fallback when `ANTHROPIC_API_KEY` is missing. Key is read in the constructor so tests can `vi.stubEnv` + `delete process.env` and exercise the missing-key path correctly. `MODELS` const carries the IDs verified at https://platform.claude.com/docs/en/about-claude/models/overview on 2026-04-25 (`claude-sonnet-4-6` / `claude-haiku-4-5-20251001`).
+- **`agent/src/llm/summarizeComponents.ts`** — renders `prompts/summarize-component.md` per component (template cached after first load), substitutes the eight `{{...}}` placeholders the template declares (FQN, simple name, kind, microservice, annotations, neighbors-from-imports, file snippet capped at 200 lines, feature name + summary). Concurrency cap of 10 via worker-pool over a shared queue. `trimSummary` strips wrapping quotes, collapses whitespace, truncates to ≤220 chars at a word boundary with `…`. Per-component failure (any throw after `LlmClient`'s own retries) is isolated: warn once, leave placeholder, continue — the whole-feature run never fails because of a single bad component.
+- **`agent/src/orchestrator.ts`** — wires `summarizeComponents` between `buildComponents` and `FeatureSchema.parse`. `applySummaries(components, map)` immutably merges results in. `feature.summary` is intentionally left as a structural placeholder — Phase 5's `reconstructFlow` will regenerate it with cross-component narrative coherence (avoiding scope creep this phase).
+- **`agent/src/cli.ts`** — `--no-llm` semantics inverted: now means "skip LLM" rather than "default behavior". LLM is the default. The dotenv loader at the top of cli.ts (committed in the env-hygiene step) reads `.env` from the workspace root via `INIT_CWD`, so `ANTHROPIC_API_KEY` lives in a single gitignored file rather than the user's shell profile.
+
+### Env hygiene
+
+- `.env.example` committed at the workspace root with empty `ANTHROPIC_API_KEY=` template (real `.env` is gitignored — confirmed by `git check-ignore -v .env` → `.gitignore:6:.env`).
+- `dotenv` added as an `@devmap/agent` runtime dep; loaded at the very top of `cli.ts` before any module reads `process.env`. The loader resolves `.env` against `INIT_CWD` so `pnpm devmap …` invoked from the workspace root finds the right file even though pnpm flips cwd to `packages/agent`.
+
+### Tests
+
+`pnpm -F @devmap/agent test` — 92 passed + 1 live-skipped across 18 files (76 from earlier + 16 new):
+
+- `client.test.ts` — 8 tests: the 5 mandated cases (success / 429-retry / 3-retry-cap / `--no-llm` / missing-key) plus `cache_control` wiring, non-429-no-retry, MODELS pin.
+- `summarizeComponents.test.ts` — 7 tests: trimSummary + trimSnippet helpers; mocked-client distinct-output invariant; per-component-failure isolation; `--no-llm` short-circuit; parallel-wall-clock check (10 calls × 50 ms each finish under 300 ms — proves `Promise.all`).
+- `featureVisits.phase3_5.integration.test.ts` — 2 cases: `[live]` end-to-end gated by both `ANTHROPIC_API_KEY` *and* `RUN_LIVE_TESTS` so `pnpm test --watch` doesn't burn credits; `[missing key]` uses both `vi.stubEnv` and `delete process.env` so dotenv's prior population doesn't mask the failure mode.
+
+### Acceptance — PLAN.md §2 Phase 3.5
+
+- ✅ `pnpm devmap feature visits --no-serve` ≈ 3.2 s (budget 10 s).
+- ✅ Every component has a non-placeholder, length-bounded (≤220 chars) summary.
+- ✅ `VisitResource.summary` ≠ `VisitsServiceClient.summary` — verified live and pinned by the integration test.
+- ✅ `ANTHROPIC_API_KEY` missing → graceful fallback (single stderr warning, all summaries kept as placeholders, exit 0).
+
 ## [0.3.0] — 2026-04-25
 
 ### Phase 3 — Full feature.json with all structural views
