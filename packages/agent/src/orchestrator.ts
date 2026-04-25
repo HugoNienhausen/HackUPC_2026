@@ -1,6 +1,5 @@
 import path from 'node:path';
 import { promises as fs } from 'node:fs';
-import YAML from 'yaml';
 import { FeatureSchema, type Feature } from '@devmap/schema';
 import { runIndex } from './index/runIndex.js';
 import { lexicalMatch } from './feature/lexicalMatch.js';
@@ -14,6 +13,9 @@ import { buildEvents } from './views/events.js';
 import { extractGatewayRoutesFromYaml } from './index/edges.js';
 import { LlmClient } from './llm/client.js';
 import { summarizeComponents, applySummaries } from './llm/summarizeComponents.js';
+import { applyIdentify, identifyFeature } from './llm/identifyFeature.js';
+import { reconstructFlow } from './llm/reconstructFlow.js';
+import { cacheLocation, readCache, writeCache } from './llm/cache.js';
 
 export interface OrchestrateOptions {
   feature: string;
@@ -22,6 +24,10 @@ export interface OrchestrateOptions {
   llm?: boolean;
   serve?: boolean;
   displayName?: string;
+  /** Force re-call of all LLM steps even if a cache hit exists. */
+  refresh?: boolean;
+  /** Workspace root for cache writes — defaults to INIT_CWD or process.cwd(). */
+  workspaceRoot?: string;
 }
 
 async function loadGatewayRoutes(repoRoot: string): Promise<GatewayRouteSpec[]> {
@@ -71,16 +77,72 @@ function repoBlock(repoRoot: string, services: string[]): Feature['repository'] 
 
 export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
   const repo = path.resolve(opts.repo);
+  const workspaceRoot = opts.workspaceRoot ?? process.env.INIT_CWD ?? process.cwd();
+  const cacheLoc = cacheLocation(workspaceRoot, repo, opts.feature);
+
+  if (!opts.refresh) {
+    const hit = await readCache<Feature>(cacheLoc);
+    if (hit) {
+      const parsed = FeatureSchema.safeParse(hit);
+      if (parsed.success) {
+        process.stderr.write(`[devmap] cache hit: ${cacheLoc.file}\n`);
+        return parsed.data;
+      }
+      process.stderr.write(
+        `[devmap] cache file at ${cacheLoc.file} failed schema validation — rebuilding\n`,
+      );
+    }
+  }
+
   const idx = await runIndex(repo);
 
   const matches = lexicalMatch(idx.classes, opts.feature);
   const seedFqns = new Set(matches.map((m) => m.fqn));
   const expandResult = expand(seedFqns, idx.classes, idx.edges, opts.depth);
 
+  // Collect candidate ClassRecords (seed ∪ expanded) for the identifier.
+  const candidateFqns = new Set<string>([...seedFqns, ...expandResult.expanded]);
+  const candidates = idx.classes.filter((c) => candidateFqns.has(c.fqn));
+
+  const llm = new LlmClient({ noLlm: opts.llm === false });
+
+  // identifyFeature runs against the LEXICAL+EXPAND candidate set BEFORE the
+  // view builders. If LLM is live and the call succeeds, we honor the
+  // classification: rejected classes are removed from `candidates`, core/periphery
+  // sets steer the components view's `core` flag.
+  const identifyResult = await identifyFeature({
+    featureName: opts.feature,
+    candidates,
+    microservices: idx.microservices,
+    client: llm,
+  });
+
+  let coreFqns = seedFqns;
+  let peripheryFqns = expandResult.expanded;
+  if (identifyResult) {
+    const applied = applyIdentify(candidates, identifyResult);
+    // Translate the LLM's id-keyed sets back into FQN-keyed sets so the
+    // existing buildComponents API doesn't change.
+    const idToFqn = new Map(applied.classes.map((c) => [
+      c.fqn.replace(/^org\.springframework\.samples\.petclinic\./, ''),
+      c.fqn,
+    ]));
+    coreFqns = new Set(
+      [...applied.coreSet]
+        .map((id) => idToFqn.get(id))
+        .filter((f): f is string => Boolean(f)),
+    );
+    peripheryFqns = new Set(
+      [...applied.peripherySet]
+        .map((id) => idToFqn.get(id))
+        .filter((f): f is string => Boolean(f)),
+    );
+  }
+
   const components0 = buildComponents({
     classes: idx.classes,
-    seedFqns,
-    expandedFqns: expandResult.expanded,
+    seedFqns: coreFqns,
+    expandedFqns: peripheryFqns,
   });
 
   const dependencies = buildDependencies({
@@ -105,13 +167,12 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
   const displayName =
     opts.displayName ??
     featureName.charAt(0).toUpperCase() + featureName.slice(1);
-  const featureMeta = {
+  let featureMeta = {
     name: featureName,
     displayName,
-    summary: `Auto-generated structural artifact for the "${featureName}" feature. Per-component summaries below are LLM-generated; cross-feature narrative pending Phase 5.`,
+    summary: `Auto-generated structural artifact for the "${featureName}" feature.`,
   };
 
-  const llm = new LlmClient({ noLlm: opts.llm === false });
   const summaries = await summarizeComponents({
     components: components0,
     classes: idx.classes,
@@ -119,12 +180,37 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
     feature: { name: featureMeta.name, summary: featureMeta.summary },
     client: llm,
   });
-  const components = applySummaries(components0, summaries);
+  let components = applySummaries(components0, summaries);
 
-  const flow = buildFlow({
+  // Structural flow first — used as the fallback for reconstructFlow.
+  const structuralFlow = buildFlow({
     components,
     edges: dependencies.edges,
   });
+
+  const reconstructed = await reconstructFlow({
+    featureName: featureMeta.name,
+    featureSummary: featureMeta.summary,
+    coreComponents: components.filter((c) => c.core),
+    crossServiceCalls: idx.edges,
+    gatewayRoutes: gatewayRoutes.map((r) => ({ target: r.target, predicates: r.predicates })),
+    entryEndpoints: endpoints,
+    fallbackMermaid: structuralFlow.mermaid,
+    fallbackNarrative: structuralFlow.narrative,
+    client: llm,
+  });
+
+  const flow = reconstructed
+    ? {
+        mermaid: reconstructed.mermaid,
+        narrative: reconstructed.narrative,
+        steps: reconstructed.steps.length > 0 ? reconstructed.steps : structuralFlow.steps,
+      }
+    : structuralFlow;
+
+  if (reconstructed?.featureSummary) {
+    featureMeta = { ...featureMeta, summary: reconstructed.featureSummary };
+  }
 
   const events = buildEvents();
 
@@ -142,5 +228,13 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
     ownership: { codeowners: [], recentContributors: [] },
   };
 
-  return FeatureSchema.parse(artifact);
+  const validated = FeatureSchema.parse(artifact);
+  // Best-effort cache write — failures are non-fatal (e.g. read-only fs).
+  try {
+    await writeCache(cacheLoc, validated);
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    process.stderr.write(`[devmap] cache write failed: ${msg}\n`);
+  }
+  return validated;
 }
