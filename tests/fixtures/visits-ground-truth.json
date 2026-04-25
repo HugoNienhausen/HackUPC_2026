@@ -1,0 +1,48 @@
+{
+  "feature": "visits",
+  "schemaVersion": "1.0.0",
+  "lockedDecisions": {
+    "customersServiceClient": "periphery (not core for visits)",
+    "metricConfig": "filtered out entirely",
+    "applicationClasses": "excluded entirely (kind: 'application')"
+  },
+  "expectedCore": [
+    { "id": "visits.web.VisitResource",               "fqn": "org.springframework.samples.petclinic.visits.web.VisitResource",               "microservice": "visits-service" },
+    { "id": "visits.model.Visit",                     "fqn": "org.springframework.samples.petclinic.visits.model.Visit",                     "microservice": "visits-service" },
+    { "id": "visits.model.VisitRepository",           "fqn": "org.springframework.samples.petclinic.visits.model.VisitRepository",           "microservice": "visits-service" },
+    { "id": "api.application.VisitsServiceClient",    "fqn": "org.springframework.samples.petclinic.api.application.VisitsServiceClient",    "microservice": "api-gateway" },
+    { "id": "api.boundary.web.ApiGatewayController",  "fqn": "org.springframework.samples.petclinic.api.boundary.web.ApiGatewayController",  "microservice": "api-gateway",   "note": "Orchestrator; entry point for the gateway-level visits flow." }
+  ],
+  "expectedPeriphery": [
+    { "id": "api.application.CustomersServiceClient", "fqn": "org.springframework.samples.petclinic.api.application.CustomersServiceClient", "microservice": "api-gateway",   "note": "Locked as periphery for visits — primary ownership is the owners feature; appears here only because the gateway-level visits aggregation needs petIds first." },
+    { "id": "api.dto.Visits",                         "fqn": "org.springframework.samples.petclinic.api.dto.Visits",                         "microservice": "api-gateway" },
+    { "id": "api.dto.VisitDetails",                   "fqn": "org.springframework.samples.petclinic.api.dto.VisitDetails",                   "microservice": "api-gateway" }
+  ],
+  "expectedAbsent": [
+    { "id": "visits.config.MetricConfig",        "fqn": "org.springframework.samples.petclinic.visits.config.MetricConfig",        "reason": "Locked decision: cross-cutting infrastructure, filtered by indexer denylist." },
+    { "id": "visits.VisitsServiceApplication",   "fqn": "org.springframework.samples.petclinic.visits.VisitsServiceApplication",   "reason": "Locked decision: @SpringBootApplication bootstrap class, kind='application' is always excluded." },
+    { "id": "customers.web.PetResource",         "fqn": "org.springframework.samples.petclinic.customers.web.PetResource",         "reason": "Pet endpoints belong to the owners feature; Visit references petId by value only." },
+    { "id": "vets.model.Vet",                    "fqn": "org.springframework.samples.petclinic.vets.model.Vet",                    "reason": "Lexical false match unrelated to visits flow." }
+  ],
+  "expectedEndpoints": [
+    "POST /owners/*/pets/{petId}/visits",
+    "GET /owners/*/pets/{petId}/visits",
+    "GET /pets/visits",
+    "GET /api/gateway/owners/{ownerId}"
+  ],
+  "expectedCrossServiceEdges": [
+    { "from": "api-gateway", "to": "customers-service", "type": "http",          "via": "CustomersServiceClient.getOwner" },
+    { "from": "api-gateway", "to": "visits-service",    "type": "http",          "via": "VisitsServiceClient.getVisitsForPets" },
+    { "from": "api-gateway", "to": "visits-service",    "type": "gateway-route", "via": "/api/visit/** -> lb://visits-service" }
+  ],
+  "expectedEntities": [
+    { "simpleName": "Visit", "table": "visits", "primaryKey": "id", "crossServiceFK": { "field": "petId", "target": "Pet (customers-service)" } }
+  ],
+  "metrics": {
+    "expectedCorePrecision": 1.0,
+    "expectedCoreRecall":    1.0,
+    "expectedPeripheryRecall": 1.0,
+    "expectedAbsentEnforcement": 1.0,
+    "note": "All four metrics must hit 1.0 — the locked-decisions set is small enough to be exact, not statistical."
+  }
+}

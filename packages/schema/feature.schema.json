@@ -1,0 +1,239 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://devmap.dev/schemas/feature/v1.json",
+  "title": "DevMap Feature Artifact",
+  "type": "object",
+  "required": ["devmapVersion", "generatedAt", "feature", "repository", "components", "flow", "dependencies", "persistence", "endpoints", "events", "ownership"],
+  "additionalProperties": false,
+  "properties": {
+    "devmapVersion": { "type": "string", "const": "1.0.0" },
+    "generatedAt": { "type": "string", "format": "date-time" },
+    "feature": {
+      "type": "object",
+      "required": ["name", "displayName", "summary"],
+      "properties": {
+        "name": { "type": "string" },
+        "displayName": { "type": "string" },
+        "summary": { "type": "string" }
+      }
+    },
+    "repository": {
+      "type": "object",
+      "required": ["name", "rootPath", "language", "framework", "microservices"],
+      "properties": {
+        "name": { "type": "string" },
+        "rootPath": { "type": "string" },
+        "language": { "type": "string", "enum": ["java", "kotlin"] },
+        "framework": { "type": "string" },
+        "microservices": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["name", "module"],
+            "properties": {
+              "name": { "type": "string" },
+              "module": { "type": "string" },
+              "port": { "type": ["integer", "null"] },
+              "description": { "type": ["string", "null"] }
+            }
+          }
+        }
+      }
+    },
+    "components": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["id", "fqn", "simpleName", "kind", "microservice", "filePath", "annotations", "core"],
+        "properties": {
+          "id": { "type": "string" },
+          "fqn": { "type": "string" },
+          "simpleName": { "type": "string" },
+          "kind": {
+            "type": "string",
+            "enum": ["controller", "service", "repository", "entity", "client", "config", "dto", "exception", "application", "mapper", "other"]
+          },
+          "microservice": { "type": "string" },
+          "filePath": { "type": "string" },
+          "lineStart": { "type": "integer" },
+          "loc": { "type": "integer" },
+          "annotations": { "type": "array", "items": { "type": "string" } },
+          "publicMethods": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "required": ["name", "signature"],
+              "properties": {
+                "name": { "type": "string" },
+                "signature": { "type": "string" },
+                "annotations": { "type": "array", "items": { "type": "string" } },
+                "lineStart": { "type": "integer" }
+              }
+            }
+          },
+          "summary": { "type": "string" },
+          "core": { "type": "boolean" }
+        }
+      }
+    },
+    "flow": {
+      "type": "object",
+      "required": ["mermaid", "narrative", "steps"],
+      "properties": {
+        "mermaid": { "type": "string" },
+        "narrative": { "type": "string" },
+        "steps": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["index", "actor", "action", "componentId"],
+            "properties": {
+              "index": { "type": "integer" },
+              "actor": { "type": "string" },
+              "action": { "type": "string" },
+              "componentId": { "type": "string" },
+              "details": { "type": "string" }
+            }
+          }
+        }
+      }
+    },
+    "dependencies": {
+      "type": "object",
+      "required": ["nodes", "edges"],
+      "properties": {
+        "nodes": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["id", "label", "microservice", "kind", "loc"],
+            "properties": {
+              "id": { "type": "string" },
+              "label": { "type": "string" },
+              "microservice": { "type": "string" },
+              "kind": { "type": "string" },
+              "loc": { "type": "integer" }
+            }
+          }
+        },
+        "edges": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["from", "to", "type"],
+            "properties": {
+              "from": { "type": "string" },
+              "to": { "type": "string" },
+              "type": { "type": "string", "enum": ["import", "http", "gateway-route", "discovery"] },
+              "label": { "type": "string" },
+              "sourceFile": { "type": "string" },
+              "sourceLine": { "type": "integer" }
+            }
+          }
+        }
+      }
+    },
+    "persistence": {
+      "type": "object",
+      "required": ["mermaidER", "entities", "operations"],
+      "properties": {
+        "mermaidER": { "type": "string" },
+        "entities": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["fqn", "simpleName", "table", "fields"],
+            "properties": {
+              "fqn": { "type": "string" },
+              "simpleName": { "type": "string" },
+              "table": { "type": "string" },
+              "fields": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "required": ["name", "type"],
+                  "properties": {
+                    "name": { "type": "string" },
+                    "type": { "type": "string" },
+                    "column": { "type": "string" },
+                    "primaryKey": { "type": "boolean" },
+                    "relation": {
+                      "type": "object",
+                      "properties": {
+                        "kind": { "type": "string", "enum": ["OneToMany", "ManyToOne", "OneToOne", "ManyToMany", "ForeignKeyByValue"] },
+                        "target": { "type": "string" },
+                        "joinColumn": { "type": "string" },
+                        "fetch": { "type": "string" },
+                        "cascade": { "type": "string" }
+                      }
+                    }
+                  }
+                }
+              }
+            }
+          }
+        },
+        "operations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "required": ["entity", "method", "inferredSql"],
+            "properties": {
+              "entity": { "type": "string" },
+              "method": { "type": "string" },
+              "inferredSql": { "type": "string" },
+              "custom": { "type": "boolean" }
+            }
+          }
+        }
+      }
+    },
+    "endpoints": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "required": ["method", "path", "componentId", "microservice"],
+        "properties": {
+          "method": { "type": "string", "enum": ["GET", "POST", "PUT", "DELETE", "PATCH"] },
+          "path": { "type": "string" },
+          "gatewayPath": { "type": ["string", "null"] },
+          "componentId": { "type": "string" },
+          "handlerMethod": { "type": "string" },
+          "microservice": { "type": "string" },
+          "requestBody": { "type": ["string", "null"] },
+          "responseType": { "type": ["string", "null"] },
+          "responseStatus": { "type": ["string", "null"] }
+        }
+      }
+    },
+    "events": {
+      "type": "object",
+      "required": ["detected", "scannedPatterns"],
+      "properties": {
+        "detected": { "type": "boolean" },
+        "scannedPatterns": { "type": "array", "items": { "type": "string" } },
+        "subscribers": { "type": "array" },
+        "publishers": { "type": "array" },
+        "placeholderMessage": { "type": "string" }
+      }
+    },
+    "ownership": {
+      "type": "object",
+      "properties": {
+        "codeowners": { "type": "array", "items": { "type": "string" } },
+        "recentContributors": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "name": { "type": "string" },
+              "email": { "type": "string" },
+              "commits": { "type": "integer" },
+              "lastCommitDate": { "type": "string", "format": "date-time" }
+            }
+          }
+        }
+      }
+    }
+  }
+}
