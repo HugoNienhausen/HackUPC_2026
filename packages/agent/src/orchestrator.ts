@@ -12,6 +12,8 @@ import { buildPersistence } from './views/persistence.js';
 import { buildFlow } from './views/flow.js';
 import { buildEvents } from './views/events.js';
 import { extractGatewayRoutesFromYaml } from './index/edges.js';
+import { LlmClient } from './llm/client.js';
+import { summarizeComponents, applySummaries } from './llm/summarizeComponents.js';
 
 export interface OrchestrateOptions {
   feature: string;
@@ -75,29 +77,49 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
   const seedFqns = new Set(matches.map((m) => m.fqn));
   const expandResult = expand(seedFqns, idx.classes, idx.edges, opts.depth);
 
-  const components = buildComponents({
+  const components0 = buildComponents({
     classes: idx.classes,
     seedFqns,
     expandedFqns: expandResult.expanded,
   });
 
   const dependencies = buildDependencies({
-    components,
+    components: components0,
     classes: idx.classes,
     edges: idx.edges,
   });
 
   const gatewayRoutes = await loadGatewayRoutes(repo);
   const endpoints = buildEndpoints({
-    components,
+    components: components0,
     classes: idx.classes,
     gatewayRoutes,
   });
 
   const persistence = buildPersistence({
-    components,
+    components: components0,
     classes: idx.classes,
   });
+
+  const featureName = opts.feature;
+  const displayName =
+    opts.displayName ??
+    featureName.charAt(0).toUpperCase() + featureName.slice(1);
+  const featureMeta = {
+    name: featureName,
+    displayName,
+    summary: `Auto-generated structural artifact for the "${featureName}" feature. Per-component summaries below are LLM-generated; cross-feature narrative pending Phase 5.`,
+  };
+
+  const llm = new LlmClient({ noLlm: opts.llm === false });
+  const summaries = await summarizeComponents({
+    components: components0,
+    classes: idx.classes,
+    edges: dependencies.edges,
+    feature: { name: featureMeta.name, summary: featureMeta.summary },
+    client: llm,
+  });
+  const components = applySummaries(components0, summaries);
 
   const flow = buildFlow({
     components,
@@ -106,19 +128,10 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
 
   const events = buildEvents();
 
-  const featureName = opts.feature;
-  const displayName =
-    opts.displayName ??
-    featureName.charAt(0).toUpperCase() + featureName.slice(1);
-
   const artifact: Feature = {
     devmapVersion: '1.0.0',
     generatedAt: new Date().toISOString(),
-    feature: {
-      name: featureName,
-      displayName,
-      summary: `[summary pending — phase 3.5] Auto-generated structural artifact for the "${featureName}" feature.`,
-    },
+    feature: featureMeta,
     repository: repoBlock(repo, idx.microservices),
     components,
     flow,
