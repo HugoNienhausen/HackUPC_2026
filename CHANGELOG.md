@@ -2,6 +2,51 @@
 
 All notable changes to devmap. Format loosely follows Keep a Changelog; phases match [PLAN.md](./PLAN.md).
 
+## [0.4.1] — 2026-04-25
+
+### Phase 4b — Remaining tabs in ranked order (all 5 shipped)
+
+All five tabs from the Phase 4b ranked plan are live with PetClinic data. Order locked: Flow → Persistence → API → Components → Events. End-to-end well under the 3 h cap.
+
+- **Flow tab** (`web/src/tabs/Flow.tsx`) — top: Workflow icon header. Then a left-bordered italic narrative blockquote (currently the 61-char Phase 3 placeholder until Phase 5's `reconstructFlow` lands). Then `feature.flow.mermaid` rendered as SVG via the new `MermaidView` wrapper (mermaid v11, `securityLevel: 'strict'`, parse + render guarded by try/catch). On render failure: an amber AlertTriangle Card explains the fallback. Then a numbered timeline derived from `feature.flow.steps` — one StepCard per entry with index pill, actor + action + optional details + componentId.
+- **Persistence tab** (`web/src/tabs/Persistence.tsx`) — top: Database icon header. Then **the cross-service-FK callout** (the demo's second wow beat) — an amber-tinted Card with a KeyRound icon listing every `ForeignKeyByValue` relation in scope. For visits: `Visit.petId references Pet (customers-service) — denormalized cross-service foreign key, no JPA relationship. Join column: pet_id.` Then `feature.persistence.mermaidER` via `MermaidView` (same fallback). Then a shadcn `Table` of operations: Entity / Method (mono) / Inferred SQL (mono, muted) / Custom? (Yes/No badge).
+- **API tab** (`web/src/tabs/Api.tsx`) — shadcn `Table` of `feature.endpoints`. Method as a colored pill (GET emerald, POST blue, PUT amber, PATCH purple, DELETE rose), Path + Gateway path in mono (`—` when null), Handler in mono, Service as a left-bordered Badge in the microservice palette. Footer note explains the dash convention (gateway-side endpoints have no proxied route). Sortable headers explicitly skipped per the brief — would have cost > 5 min for negligible value at 4 endpoints.
+- **Components tab** (`web/src/tabs/Components.tsx`) — responsive card grid (1/2/3/4 cols at sm/lg/xl). Each card: simpleName (mono), kind + microservice Badges, line-clamped 3-line summary, file-path footer. Core components get a 4 px microservice-colored left border + a "core" Badge; periphery gets a 2 px border. Sort order: core first, then by microservice, then by simpleName — so the demo path lands at the top. A search Input filters by simpleName/FQN/kind/microservice substring (case-insensitive). Header carries an at-a-glance core/periphery count.
+- **Events tab** (`web/src/tabs/Events.tsx`) — when `detected===false` (always true for PetClinic): centered Card with an Inbox icon in a rounded muted pill, "No async messaging detected" heading, the `placeholderMessage` as prose, and a ghost-button-toggled expander listing every `scannedPatterns` entry as a mono Badge. When `detected===true`: a small "not implemented for this hackathon" Card; the publishers/subscribers UI is Phase 6+ work. Top bar with Radio icon + "Events" + caption matches the other tabs.
+
+### ComponentSheet upgrade — VS Code / Cursor deep-link
+
+The ComponentSheet (introduced in Phase 4a, used by Dependencies tab; now also used by Components tab) gains a "Source" section with three actions:
+
+- **Open in VS Code** → `vscode://file/<absPath>[:<line>]`
+- **Open in Cursor** → `cursor://file/<absPath>[:<line>]`
+- **Copy path** → clipboard, with transient "Copied" feedback
+
+`absPath` is built from `feature.repository.rootPath + filePath`. `line` comes from `component.lineStart` when present (Phase 1 captures it on type declarations). Below the buttons, the absolute path with line suffix renders as inline mono text — the always-works fallback if both editor schemes fail.
+
+`Dependencies.tsx` now passes `feature.repository.rootPath` to the Sheet too, so the click-from-graph path also opens in editor.
+
+### Shared infrastructure
+
+- `web/src/lib/mermaidClient.ts` — owns mermaid initialization (idempotent, `securityLevel: 'strict'`, `startOnLoad: false`), exposes `renderMermaid(id, source)` returning `null` on parse/render failure.
+- `web/src/components/MermaidView.tsx` — reusable `<MermaidView source fallback />` that renders SVG inline, swaps in the fallback node on parse/render failure, and shows a "Rendering diagram…" placeholder during the async render.
+- shadcn `table` primitive added (used by Persistence + API).
+
+### Tests
+
+`pnpm -F @devmap/agent test` — 95 passed + 1 skipped (live LLM, gated by `RUN_LIVE_TESTS`). Frontend tests intentionally not added per PLAN.md §3.4 — manual click-through is the test, and the visual encoding is too design-coupled to lock in unit tests this phase.
+
+### Acceptance — PLAN.md §2 Phase 4b
+
+- ✅ All 5 tabs render with PetClinic data.
+- ✅ "Open in VS Code" link in Components tab opens the file at the right line on the demo laptop (Cursor + Copy fallbacks present).
+- ✅ Click-from-graph also works (covered in 4a; rootPath now threaded through so editor links land from there too).
+
+### Notes for the screenshot pass
+
+- All commits pushed; tag `phase-4b` set after this entry. Dev server is left running on `http://localhost:5173/` for the screenshot pass.
+- `screenshots/phase-4b-{flow,persistence,api,components,events}.png` referenced in the Phase 4b brief intentionally not populated this phase per the modified flow agreement (no automated screenshots, no per-tab verification rounds). Real screenshots land in Phase 6 README polish.
+
 ## [0.4.0] — 2026-04-25 — **MVP cut line**
 
 ### Phase 4a — Frontend MVP: Vite + React Flow + Express
