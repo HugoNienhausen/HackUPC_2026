@@ -139,7 +139,7 @@ export default function App() {
       case 'flow':
         return <FlowTab feature={feature} />;
       case 'persistence':
-        return <PersistenceTab />;
+        return <PersistenceTab feature={feature} />;
       case 'api':
         return <ApiTab />;
       case 'events':
