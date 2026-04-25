@@ -10,11 +10,34 @@ dotenvConfig({ path: path.resolve(envBase, '.env'), quiet: true });
 
 import { Command } from 'commander';
 import { promises as fs } from 'node:fs';
+import { fileURLToPath } from 'node:url';
+import { FeatureSchema, type Feature } from '@devmap/schema';
 import { runIndex } from './index/runIndex.js';
 import { orchestrate } from './orchestrator.js';
 import { startServer } from './serve.js';
 
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 const DEFAULT_REPO = '/Users/hugonienhausen/Desktop/spring-petclinic-microservices';
+
+function workspaceRoot(): string {
+  return process.env.INIT_CWD ?? process.cwd();
+}
+
+function demoCachePath(feature: string): string {
+  // packages/agent/src -> ../../.. -> workspace root
+  return path.resolve(HERE, '..', '..', '..', 'demo', 'cache', `${feature}.json`);
+}
+
+async function loadDemoCache(feature: string): Promise<Feature | null> {
+  try {
+    const text = await fs.readFile(demoCachePath(feature), 'utf8');
+    const parsed = FeatureSchema.safeParse(JSON.parse(text));
+    if (!parsed.success) return null;
+    return parsed.data;
+  } catch {
+    return null;
+  }
+}
 
 const program = new Command();
 
@@ -34,6 +57,8 @@ program
   .option('--port-server <n>', 'Express port', (v) => parseInt(v, 10), 3000)
   .option('--port-web <n>', 'Vite port', (v) => parseInt(v, 10), 5173)
   .option('--no-open', "Don't auto-open the browser (server still runs)")
+  .option('--refresh', 'Force re-call all LLM steps; bypass per-repo cache')
+  .option('--airplane', 'Skip ALL pipelines + LLM; read demo/cache/<feature>.json directly')
   .action(
     async (
       name: string,
@@ -46,19 +71,39 @@ program
         portServer: number;
         portWeb: number;
         open?: boolean;
+        refresh?: boolean;
+        airplane?: boolean;
       },
     ) => {
       const start = Date.now();
-      const artifact = await orchestrate({
-        feature: name,
-        repo: opts.repo,
-        depth: opts.depth,
-        llm: opts.llm ?? false,
-        serve: opts.serve ?? false,
-      });
+      let artifact: Feature;
+      if (opts.airplane) {
+        const cached = await loadDemoCache(name);
+        if (!cached) {
+          process.stderr.write(
+            `[devmap] --airplane: demo/cache/${name}.json missing or invalid. Run \`pnpm devmap feature ${name} --refresh\` first, scrub the rootPath, and commit it.\n`,
+          );
+          process.exit(2);
+        }
+        artifact = cached;
+        process.stderr.write(
+          `[devmap] airplane mode: loaded demo/cache/${name}.json (${artifact.components.length} components) in ${Date.now() - start}ms\n`,
+        );
+      } else {
+        artifact = await orchestrate({
+          feature: name,
+          repo: opts.repo,
+          depth: opts.depth,
+          llm: opts.llm ?? false,
+          serve: opts.serve ?? false,
+          refresh: opts.refresh ?? false,
+          workspaceRoot: workspaceRoot(),
+        });
+      }
+
       const json = JSON.stringify(artifact, null, 2);
       const out = opts.output ?? 'feature.json';
-      const baseCwd = process.env.INIT_CWD ?? process.cwd();
+      const baseCwd = workspaceRoot();
       if (out === '-') {
         process.stdout.write(json + '\n');
       } else {

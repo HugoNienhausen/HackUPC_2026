@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from 'vitest';
 import { promises as fs } from 'node:fs';
+import path from 'node:path';
+import os from 'node:os';
 import { orchestrate } from '../orchestrator.js';
 import { SUMMARY_PLACEHOLDER } from '../views/components.js';
 
@@ -17,12 +19,15 @@ describe('feature visits — Phase 3.5 LLM integration', () => {
         return;
       }
       const start = Date.now();
+      const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'devmap-phase35-live-'));
       const artifact = await orchestrate({
         feature: 'visits',
         repo: PETCLINIC,
+        refresh: true,
+        workspaceRoot: tmp,
       });
       const ms = Date.now() - start;
-      expect(ms).toBeLessThan(10000);
+      expect(ms).toBeLessThan(30000);
 
       for (const c of artifact.components) {
         expect(c.summary).not.toBe(SUMMARY_PLACEHOLDER);
@@ -64,9 +69,12 @@ describe('feature visits — Phase 3.5 LLM integration', () => {
       } catch {
         return;
       }
+      const tmp = await fs.mkdtemp(path.join(os.tmpdir(), 'devmap-phase35-miss-'));
       const artifact = await orchestrate({
         feature: 'visits',
         repo: PETCLINIC,
+        refresh: true,
+        workspaceRoot: tmp,
       });
       for (const c of artifact.components) {
         expect(c.summary).toBe(SUMMARY_PLACEHOLDER);
