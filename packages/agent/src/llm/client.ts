@@ -131,6 +131,42 @@ export class LlmClient {
     }
     throw lastError;
   }
+
+  /**
+   * Convenience wrapper that calls complete() and parses the response as JSON.
+   * Strips ```json fences if present. On JSON.parse failure, retries ONCE with
+   * "Return ONLY valid JSON, no prose." appended to the user prompt. Returns
+   * null when the underlying complete() returns null (--no-llm or missing key).
+   */
+  async completeJson<T = unknown>(opts: CompleteOptions): Promise<T | null> {
+    const first = await this.complete(opts);
+    if (first === null) return null;
+    const parsed = tryParseJson<T>(first);
+    if (parsed.ok) return parsed.value;
+
+    const retried = await this.complete({
+      ...opts,
+      user: opts.user + '\n\nReturn ONLY valid JSON, no prose, no markdown fences.',
+    });
+    if (retried === null) return null;
+    const parsed2 = tryParseJson<T>(retried);
+    if (parsed2.ok) return parsed2.value;
+    throw new Error(
+      `LLM returned non-JSON after retry. First chars: ${retried.slice(0, 200)}`,
+    );
+  }
+}
+
+function tryParseJson<T>(raw: string): { ok: true; value: T } | { ok: false } {
+  let s = raw.trim();
+  if (s.startsWith('```')) {
+    s = s.replace(/^```(?:json)?\s*/i, '').replace(/```\s*$/, '').trim();
+  }
+  try {
+    return { ok: true, value: JSON.parse(s) as T };
+  } catch {
+    return { ok: false };
+  }
 }
 
 function isRateLimitError(err: unknown): boolean {
