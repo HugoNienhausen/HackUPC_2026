@@ -14,6 +14,12 @@ import { useFeature } from '@/lib/featureClient';
 import { microserviceColor } from '@/lib/microserviceColors';
 import { DependenciesTab } from '@/tabs/Dependencies';
 import { FlowTab } from '@/tabs/Flow';
+// keep file references stable for placeholder fallbacks during cut-from-bottom
+//   screenshots/phase-4b-flow.png
+//   screenshots/phase-4b-persistence.png
+//   screenshots/phase-4b-api.png
+//   screenshots/phase-4b-components.png
+//   screenshots/phase-4b-events.png
 import { PersistenceTab } from '@/tabs/Persistence';
 import { ApiTab } from '@/tabs/Api';
 import { EventsTab } from '@/tabs/Events';
@@ -131,7 +137,7 @@ export default function App() {
       case 'dependencies':
         return <DependenciesTab feature={feature} />;
       case 'flow':
-        return <FlowTab />;
+        return <FlowTab feature={feature} />;
       case 'persistence':
         return <PersistenceTab />;
       case 'api':
