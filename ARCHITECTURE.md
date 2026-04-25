@@ -129,6 +129,18 @@ Feign detection is stubbed (PetClinic doesn't use it); add in <30 LOC if a futur
 
 The static analyzer emits an inter-service edge per detected call with `{from: callerService, to: targetService, method: 'WebClient'|'RestClient'|'GatewayRoute'|'DiscoveryClient', sourceFile, sourceLine}`. These render as the cross-service edges in the Dependencies graph, colored differently from intra-service import edges.
 
+### Edge types and their meaning
+
+Cross-service connectivity is split across three `edge.type` values, each preserved separately so the Phase 4 Dependencies view can render them with distinct styles:
+
+- `http` — literal `http://service` / `lb://service` URLs found at brace depth ≥ 2 (inside method bodies). One edge per source line.
+- `gateway-route` — `application.yml` route from `api-gateway` to `lb://target`. `via` carries the route predicate (e.g. `Path=/api/visit/**`).
+- `discovery` — `discoveryClient.getInstances("name")` lookup, distinct from `http` because resolution is dynamic.
+
+Intra-service edges are emitted as `type: "import"` and are not cross-service.
+
+The correct filter for "any cross-service relationship" is `from != to and type IN ("http", "discovery", "gateway-route")`. Filtering on `type=="http"` alone undercounts — e.g. PetClinic's `api-gateway → visits-service` link surfaces only as a `gateway-route` (the URL literal is a class field at depth 1), and `genai-service → customers-service` surfaces only as `discovery`.
+
 ---
 
 ## Events handling (PetClinic has none)
