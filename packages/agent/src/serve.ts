@@ -1,8 +1,11 @@
 import { spawn, type ChildProcess } from 'node:child_process';
 import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import express, { type Express } from 'express';
 import open from 'open';
 import type { Feature } from '@devmap/schema';
+
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 
 export interface ServeOptions {
   feature: Feature;
@@ -70,7 +73,7 @@ export async function startServer(opts: ServeOptions): Promise<ServeHandles> {
 
   let viteChild: ChildProcess | null = null;
   if (startVite) {
-    const webDir = path.resolve(__dirname, '..', '..', 'web');
+    const webDir = path.resolve(HERE, '..', '..', 'web');
     viteChild = spawn('pnpm', ['exec', 'vite', '--port', String(webPort), '--strictPort'], {
       cwd: webDir,
       stdio: ['ignore', 'inherit', 'inherit'],
