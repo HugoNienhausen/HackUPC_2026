@@ -38,13 +38,22 @@ const TABS: { key: TabKey; label: string; icon: LucideIcon }[] = [
 
 function Header({ feature }: { feature: Feature }) {
   const services = feature.repository.microservices.map((m) => m.name);
+  // Use-case mode signal: feature.name is camelCase (e.g. addPetToOwner)
+  // and the displayName is sentence case ("Add a pet to an owner").
+  // Legacy feature mode emitted lowercase single-word names ("visits").
+  const isUseCase = /^[a-z][A-Za-z0-9]*[A-Z]/.test(feature.feature.name);
   return (
     <header className="border-b bg-card">
       <div className="px-6 py-4">
-        <div className="flex items-baseline gap-3">
+        <div className="flex items-baseline gap-3 flex-wrap">
           <h1 className="text-2xl font-semibold tracking-tight">
             {feature.feature.displayName}
           </h1>
+          {isUseCase ? (
+            <Badge className="bg-indigo-500/15 text-indigo-700 border border-indigo-500/30 hover:bg-indigo-500/20 dark:text-indigo-300">
+              use-case
+            </Badge>
+          ) : null}
           <span className="text-sm text-muted-foreground">{feature.repository.name}</span>
         </div>
         <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
