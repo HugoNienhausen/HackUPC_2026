@@ -1,6 +1,6 @@
 # devmap — 5-Minute Demo Script
 
-> **Demo machine**: laptop with terminal pre-positioned next to a browser. PetClinic clone present. `demo/cache/visits.json` and `demo/cache/owners.json` pre-warmed. Wi-Fi backup tethered. Both `--airplane` (cached) and live runs rehearsed.
+> **Demo machine**: laptop with terminal pre-positioned next to a browser. PetClinic clone at `~/Desktop/spring-petclinic-microservices/` (only needed for the *live* spinner cameo at [4:15]). `demo/cache/visits.json` and `demo/cache/owners.json` are committed and used by `pnpm demo` — no Wi-Fi or API key required for the recorded run.
 
 ---
 
@@ -19,10 +19,10 @@
 Type and run:
 
 ```
-$ devmap feature visits
+$ pnpm demo
 ```
 
-(Spinner animates: `Indexing repo… Identifying components… Composing views… Launching dashboard…`. Browser opens.)
+(Browser opens at `http://localhost:5173/` in under 3 seconds; airplane-mode loads the pre-warmed cache, no spinner needed. The live-run spinner phases — `Scanning Java sources`, `Identifying components`, `Building dependency graph`, `Detecting persistence model`, `Generating component summaries (Claude Haiku, parallel)`, `Reconstructing request flow (Claude Sonnet)` — are demonstrated separately at [4:15].)
 
 ### [0:45 — 1:30] — Flow tab — the wow shot (45s)
 
@@ -75,12 +75,14 @@ $ devmap feature visits
 > "Switch features in one command."
 
 ```
-$ devmap feature owners
+$ pnpm demo:owners
 ```
 
 (Different feature loads — different graph, different ER, different endpoints. Demonstrates generality.)
 
 ### [4:15 — 4:45] — How it works — under the hood (30s)
+
+(Cut to a second terminal showing the live spinner from a `--refresh` run on PetClinic.)
 
 > "Two pieces. A static indexer that walks the Java source — regex-fast, no JVM needed. And targeted Claude calls: Sonnet picks the core components and writes the flow narrative; Haiku summarizes each class in parallel. Total: under 25 seconds cold, under 8 with cache."
 
@@ -110,3 +112,24 @@ $ devmap feature owners
 - [ ] Browser zoom set so graph and Mermaid diagrams are legible from the back row.
 - [ ] Terminal font size bumped — judges read along.
 - [ ] Backup screen recording of full demo, in case all live runs fail.
+
+---
+
+## Demo recording — instructions
+
+**Before pressing record:**
+
+1. **Clear browser state.** Quit the browser fully and reopen — clears DevTools state and any leftover hot-reload sockets from rehearsal. Open one window with two tabs: `about:blank` (so the auto-opened tab gets a clean slot) and a backup tab pointed at `http://localhost:5173/` for the recovery cut.
+2. **Pre-warm both demo caches.** Run `pnpm demo` and `pnpm demo:owners` once each. Confirm browser opens, all six tabs render without "ER diagram failed to render" or any console errors. Quit both servers (Ctrl+C in their terminal).
+3. **Pre-test the spinner cameo.** In the `[4:15]` cutaway you show the live ora spinner. Run `pnpm devmap feature visits --refresh` once *with internet on* before recording — confirm all six phase spinners render and the run completes in <25s. (If the API key is missing, the spinners still run but fall back to placeholders — visually fine.)
+4. **Window layout.** Browser at full screen on the primary display (1440×900 minimum). Terminal as a 100×30 floating window in the lower-right quadrant — large enough to read the spinner, small enough that judges' eyes stay on the dashboard. Terminal font ≥18pt; OS dark mode on for both.
+5. **Stopwatch.** Phone running a stopwatch app, visible to you off-camera. Beat boundaries are tight: any beat that overruns its slot eats into the next.
+
+**Order of operations once recording:**
+
+`pnpm demo` → click through Flow → Dependencies → Persistence → API → Events tabs in the order in the script → quit (Ctrl+C) → `pnpm demo:owners` → switch back to terminal for the live-spinner cameo (`pnpm devmap feature visits --refresh`) → close.
+
+**Recovery cuts (rehearse these):**
+
+- If `pnpm demo` doesn't open the browser within 5s → switch to the pre-loaded backup tab; nothing visible to the audience changes.
+- If a Mermaid diagram falls back to the amber error card → narrate over it ("the operations table below carries the join you need to see") and continue. Do *not* refresh — `mermaid.parse` is deterministic on a given source string.
