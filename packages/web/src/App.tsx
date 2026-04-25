@@ -143,7 +143,7 @@ export default function App() {
       case 'api':
         return <ApiTab feature={feature} />;
       case 'events':
-        return <EventsTab />;
+        return <EventsTab feature={feature} />;
       case 'components':
         return <ComponentsTab feature={feature} />;
     }
