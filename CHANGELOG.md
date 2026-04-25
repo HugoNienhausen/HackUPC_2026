@@ -2,6 +2,91 @@
 
 All notable changes to devmap. Format loosely follows Keep a Changelog; phases match [PLAN.md](./PLAN.md).
 
+## [0.6.0] — 2026-04-25
+
+### Phase 6 — Polish, `pnpm demo`, demo prep
+
+Final polish phase. Six commits, all priorities 1–5 landed; priority 6
+(service-node columns + tooltips) cut as planned — the graph reads
+fine without it. Tests green: 119 passed + 1 live-skipped across 23
+files. `pnpm demo` cold-terminal-to-browser in ~250 ms (Vite ready)
+plus the OS browser-launch — well under the 5 s budget.
+
+### Added
+
+- **`pnpm demo` + `pnpm demo:owners`** in the root `package.json` —
+  the keystrokes for the live demo. Both run with `--airplane` so
+  no API key and no internet are needed.
+- **CLI ora spinner with phase logs** (`packages/agent/src/progress.ts`).
+  Six TTY-gated phases: `Scanning Java sources`, `Identifying
+  components`, `Building dependency graph`, `Detecting persistence
+  model`, `Generating component summaries (Claude Haiku, parallel)`,
+  `Reconstructing request flow (Claude Sonnet)` — each shows elapsed
+  time on success. Suppressed when `stderr` is not a TTY (so test
+  pipes don't get ANSI escapes) and in `--airplane` mode (instant —
+  spinners would feel weird). Existing structured stderr lines are
+  preserved on the non-TTY path so log-scraping doesn't break.
+- **README.md** — public-facing rewrite. Hero shot, quick-start
+  one-liner, three-bullet how-it-works, tab-walkthrough table with
+  per-tab screenshot links, tech-stack table, links to the design
+  docs (ARCHITECTURE / DEMO / CHANGELOG / RISKS). `screenshots/`
+  directory committed with a checklist describing the four PNGs the
+  README expects (captured manually before the demo recording).
+- **DEMO.md "Demo recording — instructions"** section with a 5-step
+  pre-record checklist (clear browser state, pre-warm caches,
+  pre-test the spinner cameo, window layout, stopwatch) plus
+  recovery cuts for the two known live-run failure modes.
+
+### Changed
+
+- **Components tab cards** (`web/src/tabs/Components.tsx`) — uniform
+  height via `min-h-[180px]`; file-path footer uses RTL truncation
+  (`direction: rtl; text-align: left; text-overflow: ellipsis`)
+  so the *filename* stays readable when the path overflows. Title
+  attribute added so the full path tooltips on hover.
+- **Tab transitions** (`web/src/App.tsx` + `web/src/index.css`) —
+  150 ms keyframe fade on the main content container when the active
+  tab changes (`key={active}` re-mount + `animate-tab-fade` class).
+- **DEMO.md** — script beats now use `pnpm demo` / `pnpm demo:owners`
+  instead of `devmap feature …`. The live spinner cameo moves from
+  [0:30] (where airplane is silent) to [4:15] (the under-the-hood
+  beat) where the new spinner phases get to shine on a `--refresh`
+  run.
+
+### Fixed
+
+- **Persistence ER diagram render**
+  (`agent/src/views/persistence.ts`). Mermaid v11 only recognizes
+  `PK` / `FK` / `UK` as bare attribute tags, and the type token
+  cannot contain `<` or `>`. Two emit-side fixes: (a) replaced
+  `FK_byValue` with the proper comment syntax `FK "byValue"`, and
+  (b) strip Java generics from the type token (`Set<Pet>` → `Set`)
+  and skip JPA collection-navigation fields entirely (no `column` →
+  ER attributes don't apply). Cached `demo/cache/{visits,owners}.json`
+  rebuilt against the fixed emitter so the demo run shows a parsed
+  ER diagram instead of the amber fallback. The amber fallback Card
+  is kept as defense-in-depth for any future malformed source.
+
+### Acceptance — PLAN.md §2 Phase 6
+
+- ✅ `pnpm demo` from a cold terminal opens a polished dashboard in
+  <5 s, no API key needed, no internet needed.
+- ✅ Live run (`pnpm devmap feature visits --refresh`) and airplane
+  run look identical to the audience (the spinner is the only
+  visible difference, intentionally — that's the [4:15] beat).
+- ✅ DEMO.md walkthrough rehearsed against shipped behavior;
+  recording-prep instructions in place.
+
+### Cuts from the plan
+
+- **Priority 6** — service-node manual column layout + tooltips on
+  truncated graph labels. Pre-authorized cut in the brief; the
+  Dependencies graph is already legible without it.
+- **Hover tooltips on graph nodes** (PLAN.md §6 line 130) — same
+  rationale, same authorized cut.
+- **Screenshot capture** — directory + checklist committed; the four
+  PNGs themselves are captured manually before the demo recording.
+
 ## Phase 5 — LLM integration (Sonnet) + airplane mode
 
 ### Added
