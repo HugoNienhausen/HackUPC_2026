@@ -1,3 +1,5 @@
+import { useState } from 'react';
+import { ExternalLink, Clipboard, Check } from 'lucide-react';
 import type { Component } from '@devmap/schema';
 import {
   Sheet,
@@ -7,18 +9,85 @@ import {
   SheetTitle,
 } from '@/components/ui/sheet';
 import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
 import { microserviceColor } from '@/lib/microserviceColors';
 
 interface Props {
   component: Component | null;
+  rootPath?: string;
   onOpenChange: (open: boolean) => void;
 }
 
-export function ComponentSheet({ component, onOpenChange }: Props) {
+function buildAbsolutePath(rootPath: string | undefined, relPath: string): string {
+  if (!rootPath) return relPath;
+  const trimmedRoot = rootPath.replace(/\/+$/, '');
+  const trimmedRel = relPath.replace(/^\/+/, '');
+  return `${trimmedRoot}/${trimmedRel}`;
+}
+
+function buildEditorUrl(scheme: 'vscode' | 'cursor', absPath: string, line?: number): string {
+  const lineSuffix = line && line > 0 ? `:${line}` : '';
+  return `${scheme}://file${absPath.startsWith('/') ? absPath : `/${absPath}`}${lineSuffix}`;
+}
+
+function OpenInEditor({ absPath, line }: { absPath: string; line?: number }) {
+  const [copied, setCopied] = useState(false);
+  const onCopy = async () => {
+    try {
+      await navigator.clipboard.writeText(absPath);
+      setCopied(true);
+      setTimeout(() => setCopied(false), 1200);
+    } catch {
+      /* ignore */
+    }
+  };
+  const vsUrl = buildEditorUrl('vscode', absPath, line);
+  const cursorUrl = buildEditorUrl('cursor', absPath, line);
+  return (
+    <div className="space-y-2">
+      <div className="flex items-center gap-2">
+        <Button asChild size="sm" className="gap-1.5">
+          <a href={vsUrl}>
+            <ExternalLink className="h-3.5 w-3.5" />
+            Open in VS Code
+          </a>
+        </Button>
+        <Button asChild size="sm" variant="outline" className="gap-1.5">
+          <a href={cursorUrl}>
+            <ExternalLink className="h-3.5 w-3.5" />
+            Cursor
+          </a>
+        </Button>
+        <Button size="sm" variant="ghost" className="gap-1.5" onClick={onCopy}>
+          {copied ? (
+            <>
+              <Check className="h-3.5 w-3.5" />
+              Copied
+            </>
+          ) : (
+            <>
+              <Clipboard className="h-3.5 w-3.5" />
+              Copy path
+            </>
+          )}
+        </Button>
+      </div>
+      <code className="block break-all rounded bg-muted/50 px-2 py-1 font-mono text-[10px] text-muted-foreground">
+        {absPath}
+        {line && line > 0 ? `:${line}` : ''}
+      </code>
+    </div>
+  );
+}
+
+export function ComponentSheet({ component, rootPath, onOpenChange }: Props) {
   const open = component !== null;
+  const absPath = component ? buildAbsolutePath(rootPath, component.filePath) : '';
+  const line = component?.lineStart;
+
   return (
     <Sheet open={open} onOpenChange={onOpenChange}>
-      <SheetContent className="w-[460px] sm:max-w-[460px]">
+      <SheetContent className="w-[480px] sm:max-w-[480px]">
         {component && (
           <>
             <SheetHeader>
@@ -94,8 +163,11 @@ export function ComponentSheet({ component, onOpenChange }: Props) {
                 </section>
               )}
 
-              <section className="text-[10px] text-muted-foreground">
-                <span className="font-mono">{component.filePath}</span>
+              <section>
+                <h3 className="mb-2 text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Source
+                </h3>
+                <OpenInEditor absPath={absPath} line={line} />
               </section>
             </div>
           </>

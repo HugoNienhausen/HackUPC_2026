@@ -145,7 +145,7 @@ export default function App() {
       case 'events':
         return <EventsTab />;
       case 'components':
-        return <ComponentsTab />;
+        return <ComponentsTab feature={feature} />;
     }
   };
 

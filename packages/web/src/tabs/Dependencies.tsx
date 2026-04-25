@@ -164,6 +164,7 @@ export function DependenciesTab({ feature }: Props) {
 
       <ComponentSheet
         component={selectedComponent}
+        rootPath={feature.repository.rootPath}
         onOpenChange={(open) => {
           if (!open) setSelectedId(null);
         }}
