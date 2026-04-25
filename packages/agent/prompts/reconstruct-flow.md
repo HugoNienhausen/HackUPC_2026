@@ -36,6 +36,8 @@ You reconstruct the runtime flow of a feature in a Spring microservices codebase
 ## Instructions
 
 1. **Pick the most important request path** that demonstrates the feature. If multiple endpoints exist, choose the one that traverses the most components (typically a `GET` that aggregates data via the gateway).
+   - PREFER endpoints whose handler orchestrates calls to MULTIPLE service-clients (e.g. one that calls both a customers-service client AND a visits-service client) — these reveal the cross-service composition that's the signature of microservices architecture.
+   - Components with `"core": false` MAY still be on the request path. The `core` flag is about feature ownership, not request flow. An orchestrating gateway controller is often `periphery` for any one feature but `core` to the request path.
 2. **Build a Mermaid sequenceDiagram**:
    - Use `participant` declarations with short, recognizable aliases.
    - Include the client, gateway controller, gateway client wrappers, target service controller, repository, and database.

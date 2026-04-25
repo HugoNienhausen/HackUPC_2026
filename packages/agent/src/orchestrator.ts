@@ -188,10 +188,14 @@ export async function orchestrate(opts: OrchestrateOptions): Promise<Feature> {
     edges: dependencies.edges,
   });
 
+  // Send ALL in-scope components (core + periphery) to reconstructFlow.
+  // Periphery classes can still be on the request path — e.g. ApiGatewayController
+  // orchestrates the visits aggregation despite being classified periphery for
+  // the visits feature. The Component.core flag lets Sonnet prioritize.
   const reconstructed = await reconstructFlow({
     featureName: featureMeta.name,
     featureSummary: featureMeta.summary,
-    coreComponents: components.filter((c) => c.core),
+    coreComponents: components,
     crossServiceCalls: idx.edges,
     gatewayRoutes: gatewayRoutes.map((r) => ({ target: r.target, predicates: r.predicates })),
     entryEndpoints: endpoints,
