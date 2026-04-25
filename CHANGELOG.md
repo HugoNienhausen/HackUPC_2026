@@ -2,6 +2,44 @@
 
 All notable changes to devmap. Format loosely follows Keep a Changelog; phases match [PLAN.md](./PLAN.md).
 
+## Phase 5 — LLM integration (Sonnet) + airplane mode
+
+### Added
+- `LlmClient.completeJson<T>()` with one auto-retry on JSON parse failure.
+- `identifyFeature` (Sonnet 4.6): refines lexical+expand candidates into 
+  core / periphery / rejected sets. Removes rejected from artifact.
+- `reconstructFlow` (Sonnet 4.6): generates the `flow.narrative`, 
+  `flow.mermaid` (sequenceDiagram), `flow.steps`, and upgrades 
+  `feature.summary` from structural placeholder to real prose.
+- File-based cache at `.devmap/cache/<repo-hash>/<feature>.json`. 
+  Hash combines absolute repo path + git HEAD of target + devmapVersion.
+- CLI `--refresh` flag: forces re-call of all LLM calls.
+- CLI `--airplane` flag: skips orchestrator entirely, loads from 
+  `demo/cache/`. Used for the demo to guarantee zero network activity.
+- `demo/cache/visits.json` and `demo/cache/owners.json` committed for 
+  airplane-mode bulletproofing.
+- Web airplane-mode detection: rootPath starting with `<` disables 
+  VS Code/Cursor buttons with tooltip; copy-path remains enabled.
+
+### Changed
+- Components tab now displays relative paths always (not just airplane). 
+  Stores `filePath` (relative) and `absoluteFilePath` (used by VS Code 
+  button when available).
+- `reconstructFlow` receives ALL in-scope components, not just core. 
+  Periphery components can still be on the request path (e.g. 
+  ApiGatewayController orchestrates visits despite being periphery for 
+  the visits feature).
+
+### Decisions documented
+- Mermaid validation in agent is lightweight (`startsWith("sequenceDiagram")` 
+  + contains `->>`). Web does the strict parse via `mermaid.parse()` 
+  with graceful fallback. Defense-in-depth.
+- Locked decisions remain enforced by Phase 1 indexer denylist 
+  BEFORE the LLM ever sees them. MetricConfig and *Application classes 
+  cannot enter the candidate set.
+- CustomersServiceClient.core remained false after Sonnet classification 
+  (no discrepa
+  
 ## [0.4.1] — 2026-04-25
 
 ### Phase 4b — Remaining tabs in ranked order (all 5 shipped)
