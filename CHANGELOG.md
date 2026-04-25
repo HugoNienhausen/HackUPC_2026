@@ -2,6 +2,50 @@
 
 All notable changes to devmap. Format loosely follows Keep a Changelog; phases match [PLAN.md](./PLAN.md).
 
+## [0.3.0] — 2026-04-25
+
+### Phase 3 — Full feature.json with all structural views
+
+`devmap feature visits` now produces a schema-valid `feature.json` with every structural view populated (no LLM yet — summaries and the flow narrative are placeholder strings replaced in Phase 3.5 / Phase 5). End-to-end on PetClinic: ~65 ms (budget: 8 s).
+
+- **`packages/schema/src/feature.ts`** — every `z.unknown()` placeholder replaced with typed zod schemas matching the hand-written `feature.schema.json`. Worked example `examples/visits.feature.json` parses cleanly through `FeatureSchema.safeParse`. New `pnpm validate-schema <file>` script; `INIT_CWD` aware so it works from the workspace root.
+- **`agent/src/views/components.ts`** — annotation-priority kind remap: `@RestController/@Controller → controller`, `@Service → service`, `@Repository|extends Repository → repository`, `@Entity → entity`, `@Configuration → config`, suffix `Application/Exception/Mapper/Client → application/exception/mapper/client`, `package contains .dto. → dto`, else `other`. Pinned by `VisitsServiceClient` (`@Component`, ends `Client`) → `client`. Filters `flags.bootstrap`, `flags.crossCutting`, and inner classes (FQN whose parent FQN is also a class). `core` flag set from Phase 2 lexical seed; expansion neighbors get `core: false` (so `CustomersServiceClient.core === false`, per the locked decision). Summary placeholder: `[summary pending — phase 3.5]`.
+- **`agent/src/views/dependencies.ts`** — node-set is exactly the components array; edges are the Phase 1 indexer's edges filtered to ones touching the feature scope. `import` keeps both endpoints when both are components; `http`/`discovery` keep when source class is a component (preserves `sourceFile`/`sourceLine` for the future click-to-source); `gateway-route` keeps when either endpoint service contains a component.
+- **`agent/src/views/endpoints.ts`** — one row per `@*Mapping` method on each in-scope controller. Class-level `@RequestMapping("/...")` is extracted live from the source file (Phase 1's parseClass intentionally captured only annotation names, not args — local extraction here avoids retrofitting). `gatewayPath` resolution: skip when component is in api-gateway; otherwise find the YAML route whose `target == component.microservice`, strip `Path=` and trailing `/**`/`/*`, prepend to the local path. Canonical visits result: `/pets/visits → /api/visit/pets/visits`.
+- **`agent/src/views/persistence.ts` — DEMO CRITICAL.** Reads each in-scope `@Entity` source, walks the class body char-by-char with depth tracking, splits at depth-0 semicolons, and matches each chunk against `[modifiers]+ <type> <name>(=<init>)?` with `@`-prefixed lines as the field's annotations. Cross-service FK detection: field name ends in `Id`, type ∈ `{int, Integer, Long, long}`, simpleName-stripped-of-Id matches an `@Entity` in another microservice → `relation: { kind: "ForeignKeyByValue", target: "<Name> (<service>)", joinColumn: snake_case(field) }`. Visit.petId hits exactly: `Pet (customers-service) / pet_id`. Spring Data SQL inference is **hardcoded** for the four patterns visible in `VisitRepository` (`findByPetId`, `findByPetIdIn`, plus inherited `save` and `findById`); explicitly NOT a general parser per the Phase 3 brief. mermaidER emits one `<NAME> { type col tags }` block per in-scope entity plus a ghost `PET ||..o{ VISIT : "FK by petId (cross-service)"` line per FK-by-value field.
+- **`agent/src/views/flow.ts`** — structural Mermaid `sequenceDiagram`. Picks an api-gateway controller named "Gateway" as the entry, walks one import-edge step at a time toward client/repository/controller neighbors, ducks out on cross-service `http`/`discovery` edges to dispatch into the target service's controller, and ends at a repository's owned entity. Steps array tracks each `->>` line. Narrative is the `Reconstruction pending — full narrative generated in Phase 5.` placeholder.
+- **`agent/src/views/events.ts`** — hardcoded placeholder: `detected: false`, the 11-pattern grep checklist (`@KafkaListener`, `KafkaTemplate`, `@RabbitListener`, …), and the `VectorStoreController.loadVetDataToVectorStoreOnStartup` lifecycle-hook explanation copied verbatim from the worked example.
+- **`agent/src/orchestrator.ts`** — `orchestrate({ feature, repo, depth, ... })` runs the index, runs the feature identifier, calls all six view builders, validates with `FeatureSchema.parse()`, and returns the artifact. Loads the api-gateway YAML routes once and threads them into `buildEndpoints`.
+- **`agent/src/cli.ts`** — `feature <name>` now calls the orchestrator and writes `feature.json` (or stdout via `-o -`). Path resolution honors `INIT_CWD` so the file lands where the user invoked from. New flags `--depth <n>`, `-o, --output <file>`, `--no-llm` (default this phase), `--no-serve` (default this phase).
+
+### Tech debt notes
+
+- **Repository methods are extracted locally in persistence.ts**, not by retrofitting Phase 1's parseClass. Phase 1 only emits `@*Mapping`-annotated methods; a Repository interface declares plain methods. If a future view needs all-methods, retrofit parseClass then.
+- **inferredSql is hardcoded** for the four patterns visible in VisitRepository. If owners feature in Phase 5 surfaces more Spring Data conventions (`findByXAndY`, `countBy*`, `existsBy*`, `deleteBy*`, …), extend then.
+
+### Tests
+
+`pnpm -F @devmap/agent test` — 76 vitest tests across 15 files (38 from Phase 1+2 stand; 38 new):
+
+- `components.test.ts` — 13 tests: 9 viewKind cases including the locked annotation-priority pin (`VisitsServiceClient → client`, `@Service` wins over `*Client`); 4 buildComponents cases (locked-decision filters, inner-class drop, summary placeholder, CSC core===false).
+- `dependencies.test.ts` — 4 tests: import-edge drop-out-of-scope, http source-must-be-component, gateway-route either-endpoint, nodes-mirror-components.
+- `endpoints.test.ts` — 7 tests: gatewayPrefix stripping, resolveGatewayPath positive/null/null, extractClassBasePath, full VisitResource → 3 endpoints with `/api/visit/...` gateway paths.
+- `persistence.test.ts` — 10 tests: camelToSnake / extractTableName / extractFields against real Visit.java fixture / detectFkByValue (4 cases including same-service-skip, no-match, non-FK type) / extractRepoInfo / extractInterfaceMethods against real VisitRepository.java / full buildPersistence end-to-end with petId FK and 4 operations.
+- `flow.test.ts` — 2 tests: sequenceDiagram + arrow shape; empty-scope fallback.
+- `events.test.ts` — 1 test: shape + schema validation.
+- `featureVisits.phase3.integration.test.ts` — 1 test asserting every PLAN.md §2 acceptance bullet plus the demo-critical petId FK shape against the live PetClinic clone.
+
+### Acceptance — PLAN.md §2 Phase 3
+
+- ✅ `feature.json` validates against `FeatureSchema`.
+- ✅ `pnpm devmap feature visits --no-llm --no-serve` ≈ 65 ms (budget 8 s).
+- ✅ `components.length` = 10 (≥6); MetricConfig and `*Application` absent.
+- ✅ `persistence.entities` contains Visit (table `visits`, 4 fields).
+- ✅ `endpoints.length` = 4 (≥3) including the gateway-resolved `/api/visit/pets/visits`.
+- ✅ Cross-service edge `api-gateway → visits-service` (gateway-route) present.
+- ✅ `events.detected === false`.
+- ✅ **Demo critical**: `Visit.petId.relation` = `{ kind: "ForeignKeyByValue", target: "Pet (customers-service)", joinColumn: "pet_id" }`.
+
 ## [0.2.0] — 2026-04-25
 
 ### Phase 2 — Feature identification by lexical match
