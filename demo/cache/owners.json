@@ -504,7 +504,7 @@
     ]
   },
   "persistence": {
-    "mermaidER": "erDiagram\n  OWNER {\n    Integer id PK\n    String first_name\n    String last_name\n    String address\n    String city\n    String telephone\n    Set<Pet> pets\n  }",
+    "mermaidER": "erDiagram\n  OWNER {\n    Integer id PK\n    String first_name\n    String last_name\n    String address\n    String city\n    String telephone\n  }",
     "entities": [
       {
         "fqn": "org.springframework.samples.petclinic.customers.model.Owner",

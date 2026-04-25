@@ -154,7 +154,9 @@ export default function App() {
       <Header feature={feature} />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar active={active} onSelect={setActive} />
-        <main className="flex-1 overflow-hidden">{renderActive()}</main>
+        <main key={active} className="flex-1 overflow-hidden animate-tab-fade">
+          {renderActive()}
+        </main>
       </div>
     </div>
   );

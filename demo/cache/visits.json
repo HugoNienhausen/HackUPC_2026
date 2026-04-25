@@ -441,7 +441,7 @@
     ]
   },
   "persistence": {
-    "mermaidER": "erDiagram\n  VISIT {\n    Integer id PK\n    Date visit_date\n    String description\n    int pet_id FK_byValue\n  }\n  PET ||..o{ VISIT : \"FK by petId (cross-service)\"",
+    "mermaidER": "erDiagram\n  VISIT {\n    Integer id PK\n    Date visit_date\n    String description\n    int pet_id FK \"byValue\"\n  }\n  PET ||..o{ VISIT : \"FK by petId (cross-service)\"",
     "entities": [
       {
         "fqn": "org.springframework.samples.petclinic.visits.model.Visit",

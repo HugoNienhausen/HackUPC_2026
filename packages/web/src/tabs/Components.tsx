@@ -16,7 +16,7 @@ function ComponentCard({ c, onClick }: { c: Component; onClick: () => void }) {
     <button
       type="button"
       onClick={onClick}
-      className="group flex w-full flex-col gap-2 rounded-md border bg-card p-3 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
+      className="group flex min-h-[180px] w-full flex-col gap-2 rounded-md border bg-card p-3 text-left shadow-sm transition-all hover:border-primary/40 hover:shadow-md"
       style={{
         borderLeft: `${c.core ? '4px' : '2px'} solid ${microserviceColor(c.microservice)}`,
       }}
@@ -38,7 +38,11 @@ function ComponentCard({ c, onClick }: { c: Component; onClick: () => void }) {
           {c.summary}
         </p>
       )}
-      <div className="mt-auto truncate font-mono text-[10px] text-muted-foreground/70">
+      <div
+        className="mt-auto block overflow-hidden whitespace-nowrap font-mono text-[10px] text-muted-foreground/70"
+        style={{ direction: 'rtl', textAlign: 'left', textOverflow: 'ellipsis' }}
+        title={c.filePath}
+      >
         {c.filePath}
       </div>
     </button>

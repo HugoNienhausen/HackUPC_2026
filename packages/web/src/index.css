@@ -128,3 +128,12 @@
     @apply font-sans;
     }
 }
+
+@keyframes tab-fade {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+
+.animate-tab-fade {
+  animation: tab-fade 150ms ease-out;
+}

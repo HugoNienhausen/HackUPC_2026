@@ -196,6 +196,6 @@ describe('persistence — buildPersistence end-to-end on the Visit fixture', () 
     expect(r.mermaidER).toContain('erDiagram');
     expect(r.mermaidER).toContain('VISIT');
     expect(r.mermaidER).toContain('PET ||..o{ VISIT');
-    expect(r.mermaidER).toContain('FK_byValue');
+    expect(r.mermaidER).toContain('FK "byValue"');
   });
 });

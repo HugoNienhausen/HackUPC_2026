@@ -196,6 +196,17 @@ function inferSql(methodName: string, table: string): string | null {
   return fn ? fn(table) : null;
 }
 
+function sanitizeErType(type: string): string {
+  // mermaid v11 erDiagram disallows '<', '>' inside type tokens (used for
+  // diagram syntax). Strip Java generics: `Set<Pet>` -> `Set`. Also collapse
+  // any whitespace.
+  return type.replace(/<[^>]*>/g, '').replace(/\s+/g, '').trim();
+}
+
+function isCollectionType(type: string): boolean {
+  return /<.+>/.test(type) || /\[\]$/.test(type);
+}
+
 function buildMermaidEr(
   entities: Persistence['entities'],
   ghostTargets: Set<string>,
@@ -203,12 +214,20 @@ function buildMermaidEr(
   const lines = ['erDiagram'];
   for (const e of entities) {
     const entityToken = e.simpleName.toUpperCase();
-    const fieldLines = e.fields.map((f) => {
+    // Skip JPA collection-navigation fields (Set<Pet>, List<X>) — those map to
+    // ER relationship lines, not attributes. Keeps the diagram parseable.
+    const columnFields = e.fields.filter(
+      (f) => !isCollectionType(f.type) && (f.column || f.primaryKey || f.relation),
+    );
+    const fieldLines = columnFields.map((f) => {
       const col = f.column ?? f.name;
       const tags: string[] = [];
       if (f.primaryKey) tags.push('PK');
-      if (f.relation?.kind === 'ForeignKeyByValue') tags.push('FK_byValue');
-      const type = f.type;
+      // mermaid v11 only recognizes PK / FK / UK as bare tags; extra info
+      // must be a quoted comment after the tag. Use FK "byValue" so judges
+      // see the cross-service-FK distinction in the diagram.
+      if (f.relation?.kind === 'ForeignKeyByValue') tags.push('FK "byValue"');
+      const type = sanitizeErType(f.type);
       return `    ${type} ${col}${tags.length ? ' ' + tags.join(' ') : ''}`;
     });
     lines.push(`  ${entityToken} {`);
