@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "devmap": "pnpm -F @devmap/agent run devmap",
+    "demo": "pnpm -F @devmap/agent run devmap feature visits --airplane",
+    "demo:owners": "pnpm -F @devmap/agent run devmap feature owners --airplane",
     "build": "pnpm -r run build",
     "test": "pnpm -r run test",
     "validate-schema": "pnpm -F @devmap/schema run validate"
