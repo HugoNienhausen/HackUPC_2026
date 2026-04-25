@@ -11,6 +11,7 @@ import {
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Component, Feature } from '@devmap/schema';
+import { microserviceColor } from '@/lib/microserviceColors';
 import {
   Select,
   SelectContent,
@@ -140,8 +141,16 @@ export function DependenciesTab({ feature }: Props) {
             position="bottom-left"
             pannable
             zoomable
-            nodeColor={() => '#94a3b8'}
-            maskColor="rgba(0,0,0,0.05)"
+            maskColor="rgba(255,255,255,0.6)"
+            nodeColor={(node) => {
+              const data = (node as Node).data as ServiceNodeData | undefined;
+              return microserviceColor(data?.component.microservice ?? '');
+            }}
+            style={{
+              background: 'white',
+              border: '1px solid #e5e7eb',
+              borderRadius: '8px',
+            }}
           />
         </ReactFlow>
       </ReactFlowProvider>
