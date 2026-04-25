@@ -4,6 +4,12 @@ import type { Component, Feature } from '@devmap/schema';
 
 export interface ServiceNodeData extends Record<string, unknown> {
   component: Component;
+  /**
+   * True when the node was synthesized from a cross-service edge whose target
+   * is a service NAME (e.g. `visits-service`) rather than an actual class in
+   * the feature scope. Synthetic nodes get a different label treatment.
+   */
+  synthetic?: boolean;
 }
 
 // width raised from 100 to 150 so VisitRepository / CustomersServiceClient
@@ -98,7 +104,7 @@ export function buildDependenciesGraph(feature: Feature): DepsGraph {
       syntheticNodes.push({
         id: endpoint,
         type: 'serviceNode',
-        data: { component: fakeComponent },
+        data: { component: fakeComponent, synthetic: true },
         position: { x: 0, y: 0 },
         width: NODE_MIN.width,
         height: NODE_MIN.height,

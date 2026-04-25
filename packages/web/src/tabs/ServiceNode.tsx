@@ -14,9 +14,15 @@ export function ServiceNode({ data, selected }: NodeProps & { data: ServiceNodeD
     >
       <Handle type="target" position={Position.Left} className="!h-2 !w-2 !border-0 !bg-muted-foreground/40" />
       <div className="truncate text-sm font-semibold leading-tight">{c.simpleName}</div>
-      <div className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
-        {c.kind} · {c.microservice}
-      </div>
+      {data.synthetic ? (
+        <div className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+          microservice
+        </div>
+      ) : (
+        <div className="truncate text-[10px] uppercase tracking-wide text-muted-foreground">
+          {c.kind} · {c.microservice}
+        </div>
+      )}
       <Handle type="source" position={Position.Right} className="!h-2 !w-2 !border-0 !bg-muted-foreground/40" />
     </div>
   );
