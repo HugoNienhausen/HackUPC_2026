@@ -1,0 +1,561 @@
+{
+  "devmapVersion": "1.0.0",
+  "generatedAt": "2026-04-25T18:34:49.394Z",
+  "feature": {
+    "name": "addPetToOwner",
+    "displayName": "Add a pet to an owner",
+    "summary": "The addPetToOwner feature allows a client to create a new pet record and associate it with an existing owner by POSTing pet details through the API Gateway to the customers-service. PetResource validates the owner's existence, resolves the pet type, persists the new Pet entity via JPA repositories, and returns the created pet details as a structured HTTP 201 response."
+  },
+  "repository": {
+    "name": "spring-petclinic-microservices",
+    "rootPath": "<repo>",
+    "language": "java",
+    "framework": "spring-boot",
+    "microservices": [
+      {
+        "name": "admin-server",
+        "module": "spring-petclinic-admin-server",
+        "port": 9090
+      },
+      {
+        "name": "api-gateway",
+        "module": "spring-petclinic-api-gateway",
+        "port": 8080
+      },
+      {
+        "name": "config-server",
+        "module": "spring-petclinic-config-server",
+        "port": 8888
+      },
+      {
+        "name": "customers-service",
+        "module": "spring-petclinic-customers-service",
+        "port": 8081
+      },
+      {
+        "name": "discovery-server",
+        "module": "spring-petclinic-discovery-server",
+        "port": 8761
+      },
+      {
+        "name": "genai-service",
+        "module": "spring-petclinic-genai-service",
+        "port": 8084
+      },
+      {
+        "name": "vets-service",
+        "module": "spring-petclinic-vets-service",
+        "port": 8083
+      },
+      {
+        "name": "visits-service",
+        "module": "spring-petclinic-visits-service",
+        "port": 8082
+      }
+    ]
+  },
+  "components": [
+    {
+      "id": "customers.model.Owner",
+      "fqn": "org.springframework.samples.petclinic.customers.model.Owner",
+      "simpleName": "Owner",
+      "kind": "entity",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/model/Owner.java",
+      "loc": 143,
+      "annotations": [
+        "@Entity",
+        "@Table"
+      ],
+      "publicMethods": [],
+      "summary": "Represents a pet owner with contact information and manages an associated collection of pets, supporting the addPetToOwner feature by maintaining the owner-pet relationship.",
+      "core": true
+    },
+    {
+      "id": "customers.model.OwnerRepository",
+      "fqn": "org.springframework.samples.petclinic.customers.model.OwnerRepository",
+      "simpleName": "OwnerRepository",
+      "kind": "repository",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/model/OwnerRepository.java",
+      "loc": 31,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Provides data access operations for Owner domain objects, enabling CRUD operations and custom queries through Spring Data JPA conventions to support pet ownership management in the customers-service.",
+      "core": true
+    },
+    {
+      "id": "customers.model.Pet",
+      "fqn": "org.springframework.samples.petclinic.customers.model.Pet",
+      "simpleName": "Pet",
+      "kind": "entity",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/model/Pet.java",
+      "loc": 125,
+      "annotations": [
+        "@Entity",
+        "@Table"
+      ],
+      "publicMethods": [],
+      "summary": "Represents a pet entity with core attributes like name, birth date, type, and owner association, serving as the persistent model for the addPetToOwner feature.",
+      "core": true
+    },
+    {
+      "id": "customers.model.PetRepository",
+      "fqn": "org.springframework.samples.petclinic.customers.model.PetRepository",
+      "simpleName": "PetRepository",
+      "kind": "repository",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/model/PetRepository.java",
+      "loc": 50,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Provides data access for Pet and PetType entities, enabling retrieval of all pet types and lookup by type ID to support pet creation and owner association.",
+      "core": true
+    },
+    {
+      "id": "customers.web.PetResource",
+      "fqn": "org.springframework.samples.petclinic.customers.web.PetResource",
+      "simpleName": "PetResource",
+      "kind": "controller",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/PetResource.java",
+      "loc": 101,
+      "annotations": [
+        "@RestController",
+        "@Timed"
+      ],
+      "publicMethods": [
+        {
+          "name": "getPetTypes",
+          "signature": "getPetTypes(...)",
+          "annotations": [
+            "@GetMapping"
+          ],
+          "lineStart": 49
+        },
+        {
+          "name": "processCreationForm",
+          "signature": "processCreationForm(...)",
+          "annotations": [
+            "@PostMapping"
+          ],
+          "lineStart": 54
+        },
+        {
+          "name": "processUpdateForm",
+          "signature": "processUpdateForm(...)",
+          "annotations": [
+            "@PutMapping"
+          ],
+          "lineStart": 68
+        },
+        {
+          "name": "findPet",
+          "signature": "findPet(...)",
+          "annotations": [
+            "@GetMapping"
+          ],
+          "lineStart": 88
+        }
+      ],
+      "summary": "Exposes REST endpoints to manage pets, including creating and updating pet records associated with owners, retrieving pet types, and fetching individual pet details.",
+      "core": true
+    },
+    {
+      "id": "customers.model.PetType",
+      "fqn": "org.springframework.samples.petclinic.customers.model.PetType",
+      "simpleName": "PetType",
+      "kind": "entity",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/model/PetType.java",
+      "loc": 52,
+      "annotations": [
+        "@Entity",
+        "@Table"
+      ],
+      "publicMethods": [],
+      "summary": "Represents a pet category (Cat, Dog, Hamster, etc.) stored in the types table and used when creating new pet records for owners.",
+      "core": false
+    },
+    {
+      "id": "customers.web.PetDetails",
+      "fqn": "org.springframework.samples.petclinic.customers.web.PetDetails",
+      "simpleName": "PetDetails",
+      "kind": "other",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/PetDetails.java",
+      "loc": 45,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Transforms a Pet entity into a web-friendly record containing pet details and the owner's full name, formatted for API responses in the addPetToOwner feature.",
+      "core": false
+    },
+    {
+      "id": "customers.web.PetRequest",
+      "fqn": "org.springframework.samples.petclinic.customers.web.PetRequest",
+      "simpleName": "PetRequest",
+      "kind": "other",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/PetRequest.java",
+      "loc": 35,
+      "annotations": [],
+      "publicMethods": [],
+      "summary": "Captures pet creation request data including id, name, birth date, and type for adding a new pet to an owner in the customers service.",
+      "core": false
+    },
+    {
+      "id": "customers.web.ResourceNotFoundException",
+      "fqn": "org.springframework.samples.petclinic.customers.web.ResourceNotFoundException",
+      "simpleName": "ResourceNotFoundException",
+      "kind": "exception",
+      "microservice": "customers-service",
+      "filePath": "spring-petclinic-customers-service/src/main/java/org/springframework/samples/petclinic/customers/web/ResourceNotFoundException.java",
+      "loc": 14,
+      "annotations": [
+        "@ResponseStatus"
+      ],
+      "publicMethods": [],
+      "summary": "Signals that a requested resource was not found in the customers-service, returning an HTTP 404 response when thrown during pet or owner lookup operations.",
+      "core": false
+    }
+  ],
+  "flow": {
+    "mermaid": "sequenceDiagram\n  participant Client\n  participant Gateway as API Gateway\n  participant PetResource as PetResource\n  participant OwnerRepo as OwnerRepository\n  participant PetRepo as PetRepository\n  participant DB as Database\n\n  Client->>Gateway: POST /api/customer/owners/{ownerId}/pets\n  Gateway->>PetResource: POST /owners/{ownerId}/pets (lb)\n  PetResource->>OwnerRepo: findById(ownerId)\n  OwnerRepo->>DB: SELECT * FROM owners WHERE id = ownerId\n  DB-->>OwnerRepo: Owner row\n  OwnerRepo-->>PetResource: Owner entity\n  alt Owner not found\n    PetResource-->>Client: 404 ResourceNotFoundException\n  end\n  PetResource->>PetRepo: findPetTypeById(petRequest.typeId)\n  PetRepo->>DB: SELECT * FROM types WHERE id = typeId\n  DB-->>PetRepo: PetType row\n  PetRepo-->>PetResource: PetType entity\n  PetResource->>PetResource: new Pet(name, birthDate, type, owner)\n  PetResource->>PetRepo: save(pet)\n  PetRepo->>DB: INSERT INTO pets (name, birth_date, type_id, owner_id)\n  DB-->>PetRepo: saved Pet\n  PetRepo-->>PetResource: Pet entity\n  PetResource->>PetResource: wrap as PetDetails\n  PetResource-->>Gateway: 201 PetDetails JSON\n  Gateway-->>Client: 201 PetDetails JSON",
+    "narrative": "A client POSTs a PetRequest (name, birthDate, typeId) to the API Gateway, which routes it via load-balanced HTTP to PetResource.processCreationForm in the customers-service. PetResource first fetches the Owner by ownerId through OwnerRepository; if not found, ResourceNotFoundException returns a 404. It then resolves the PetType via PetRepository, constructs a new Pet entity linked to that owner, and persists it with a database INSERT. The saved Pet is wrapped into a PetDetails response and returned as HTTP 201.",
+    "steps": [
+      {
+        "index": 1,
+        "actor": "Client",
+        "action": "Sends POST request with pet data (name, birthDate, typeId) in the request body",
+        "componentId": "customers.web.PetRequest",
+        "details": "POST /api/customer/owners/{ownerId}/pets routed through the API Gateway to customers-service"
+      },
+      {
+        "index": 2,
+        "actor": "API Gateway",
+        "action": "Routes request to customers-service via load-balanced HTTP",
+        "componentId": "customers.web.PetResource",
+        "details": "Gateway predicate Path=/api/customer/** forwards to PetResource.processCreationForm"
+      },
+      {
+        "index": 3,
+        "actor": "PetResource",
+        "action": "Looks up the Owner by ownerId to validate existence",
+        "componentId": "customers.model.OwnerRepository",
+        "details": "Calls OwnerRepository.findById(ownerId); throws ResourceNotFoundException (HTTP 404) if absent"
+      },
+      {
+        "index": 4,
+        "actor": "OwnerRepository",
+        "action": "Executes SELECT query to retrieve owner record",
+        "componentId": "customers.model.Owner",
+        "details": "SELECT * FROM owners WHERE id = ownerId; returns Owner entity"
+      },
+      {
+        "index": 5,
+        "actor": "PetResource",
+        "action": "Resolves the PetType from the request's typeId",
+        "componentId": "customers.model.PetRepository",
+        "details": "Calls PetRepository to find PetType by ID; used to set the type on the new Pet"
+      },
+      {
+        "index": 6,
+        "actor": "PetRepository",
+        "action": "Executes SELECT query to retrieve pet type record",
+        "componentId": "customers.model.PetType",
+        "details": "SELECT * FROM types WHERE id = typeId; returns PetType entity"
+      },
+      {
+        "index": 7,
+        "actor": "PetResource",
+        "action": "Constructs and persists the new Pet entity linked to the Owner",
+        "componentId": "customers.model.Pet",
+        "details": "Creates Pet with name, birthDate, PetType, and Owner association, then calls PetRepository.save(pet)"
+      },
+      {
+        "index": 8,
+        "actor": "PetRepository",
+        "action": "Executes INSERT to persist the new pet record",
+        "componentId": "customers.model.PetRepository",
+        "details": "INSERT INTO pets (name, birth_date, type_id, owner_id) VALUES (...)"
+      },
+      {
+        "index": 9,
+        "actor": "PetResource",
+        "action": "Wraps the saved Pet entity into a PetDetails response object",
+        "componentId": "customers.web.PetDetails",
+        "details": "PetDetails includes pet attributes and the owner's full name for the API response"
+      },
+      {
+        "index": 10,
+        "actor": "PetResource",
+        "action": "Returns HTTP 201 with PetDetails JSON to the client via the gateway",
+        "componentId": "customers.web.PetResource",
+        "details": "Response travels back through the API Gateway to the originating client"
+      }
+    ]
+  },
+  "dependencies": {
+    "nodes": [
+      {
+        "id": "customers.model.Owner",
+        "label": "Owner",
+        "microservice": "customers-service",
+        "kind": "entity",
+        "loc": 143
+      },
+      {
+        "id": "customers.model.OwnerRepository",
+        "label": "OwnerRepository",
+        "microservice": "customers-service",
+        "kind": "repository",
+        "loc": 31
+      },
+      {
+        "id": "customers.model.Pet",
+        "label": "Pet",
+        "microservice": "customers-service",
+        "kind": "entity",
+        "loc": 125
+      },
+      {
+        "id": "customers.model.PetRepository",
+        "label": "PetRepository",
+        "microservice": "customers-service",
+        "kind": "repository",
+        "loc": 50
+      },
+      {
+        "id": "customers.web.PetResource",
+        "label": "PetResource",
+        "microservice": "customers-service",
+        "kind": "controller",
+        "loc": 101
+      },
+      {
+        "id": "customers.model.PetType",
+        "label": "PetType",
+        "microservice": "customers-service",
+        "kind": "entity",
+        "loc": 52
+      },
+      {
+        "id": "customers.web.PetDetails",
+        "label": "PetDetails",
+        "microservice": "customers-service",
+        "kind": "other",
+        "loc": 45
+      },
+      {
+        "id": "customers.web.PetRequest",
+        "label": "PetRequest",
+        "microservice": "customers-service",
+        "kind": "other",
+        "loc": 35
+      },
+      {
+        "id": "customers.web.ResourceNotFoundException",
+        "label": "ResourceNotFoundException",
+        "microservice": "customers-service",
+        "kind": "exception",
+        "loc": 14
+      }
+    ],
+    "edges": [
+      {
+        "from": "api-gateway",
+        "to": "customers-service",
+        "type": "gateway-route",
+        "label": "Path=/api/customer/** -> lb://customers-service",
+        "sourceFile": "spring-petclinic-api-gateway/src/main/resources/application.yml"
+      },
+      {
+        "from": "customers.web.PetDetails",
+        "to": "customers.model.Pet",
+        "type": "import"
+      },
+      {
+        "from": "customers.web.PetDetails",
+        "to": "customers.model.PetType",
+        "type": "import"
+      }
+    ]
+  },
+  "persistence": {
+    "mermaidER": "erDiagram\n  OWNER {\n    Integer id PK\n    String first_name\n    String last_name\n    String address\n    String city\n    String telephone\n  }\n  PET {\n    Integer id PK\n    String name\n    Date birth_date\n  }\n  PETTYPE {\n    Integer id PK\n    String name\n  }",
+    "entities": [
+      {
+        "fqn": "org.springframework.samples.petclinic.customers.model.Owner",
+        "simpleName": "Owner",
+        "table": "owners",
+        "fields": [
+          {
+            "name": "id",
+            "type": "Integer",
+            "primaryKey": true
+          },
+          {
+            "name": "firstName",
+            "type": "String",
+            "column": "first_name"
+          },
+          {
+            "name": "lastName",
+            "type": "String",
+            "column": "last_name"
+          },
+          {
+            "name": "address",
+            "type": "String",
+            "column": "address"
+          },
+          {
+            "name": "city",
+            "type": "String",
+            "column": "city"
+          },
+          {
+            "name": "telephone",
+            "type": "String",
+            "column": "telephone"
+          },
+          {
+            "name": "pets",
+            "type": "Set<Pet>"
+          }
+        ]
+      },
+      {
+        "fqn": "org.springframework.samples.petclinic.customers.model.Pet",
+        "simpleName": "Pet",
+        "table": "pets",
+        "fields": [
+          {
+            "name": "id",
+            "type": "Integer",
+            "primaryKey": true
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "column": "name"
+          },
+          {
+            "name": "birthDate",
+            "type": "Date",
+            "column": "birth_date"
+          },
+          {
+            "name": "type",
+            "type": "PetType"
+          },
+          {
+            "name": "owner",
+            "type": "Owner"
+          }
+        ]
+      },
+      {
+        "fqn": "org.springframework.samples.petclinic.customers.model.PetType",
+        "simpleName": "PetType",
+        "table": "types",
+        "fields": [
+          {
+            "name": "id",
+            "type": "Integer",
+            "primaryKey": true
+          },
+          {
+            "name": "name",
+            "type": "String",
+            "column": "name"
+          }
+        ]
+      }
+    ],
+    "operations": [
+      {
+        "entity": "Owner",
+        "method": "save(Owner)",
+        "inferredSql": "INSERT INTO owners (...) / UPDATE owners SET ... WHERE id = ?",
+        "custom": false
+      },
+      {
+        "entity": "Owner",
+        "method": "findById(Integer)",
+        "inferredSql": "SELECT v.* FROM owners v WHERE v.id = ?",
+        "custom": false
+      },
+      {
+        "entity": "Pet",
+        "method": "save(Pet)",
+        "inferredSql": "INSERT INTO pets (...) / UPDATE pets SET ... WHERE id = ?",
+        "custom": false
+      },
+      {
+        "entity": "Pet",
+        "method": "findById(Integer)",
+        "inferredSql": "SELECT v.* FROM pets v WHERE v.id = ?",
+        "custom": false
+      }
+    ]
+  },
+  "endpoints": [
+    {
+      "method": "GET",
+      "path": "/petTypes",
+      "gatewayPath": "/api/customer/petTypes",
+      "componentId": "customers.web.PetResource",
+      "handlerMethod": "getPetTypes",
+      "microservice": "customers-service"
+    },
+    {
+      "method": "POST",
+      "path": "/owners/{ownerId}/pets",
+      "gatewayPath": "/api/customer/owners/{ownerId}/pets",
+      "componentId": "customers.web.PetResource",
+      "handlerMethod": "processCreationForm",
+      "microservice": "customers-service"
+    },
+    {
+      "method": "PUT",
+      "path": "/owners/*/pets/{petId}",
+      "gatewayPath": "/api/customer/owners/*/pets/{petId}",
+      "componentId": "customers.web.PetResource",
+      "handlerMethod": "processUpdateForm",
+      "microservice": "customers-service"
+    },
+    {
+      "method": "GET",
+      "path": "/owners/*/pets/{petId}",
+      "gatewayPath": "/api/customer/owners/*/pets/{petId}",
+      "componentId": "customers.web.PetResource",
+      "handlerMethod": "findPet",
+      "microservice": "customers-service"
+    }
+  ],
+  "events": {
+    "detected": false,
+    "scannedPatterns": [
+      "@KafkaListener",
+      "KafkaTemplate",
+      "@RabbitListener",
+      "RabbitTemplate",
+      "@JmsListener",
+      "JmsTemplate",
+      "@StreamListener",
+      "@EnableBinding",
+      "StreamBridge",
+      "ApplicationEventPublisher",
+      "@EventListener (excluding lifecycle)"
+    ],
+    "subscribers": [],
+    "publishers": [],
+    "placeholderMessage": "No asynchronous messaging detected. All inter-service communication is synchronous HTTP via the api-gateway. The only @EventListener match is a startup lifecycle hook in genai-service (VectorStoreController.loadVetDataToVectorStoreOnStartup) — not inter-service messaging."
+  },
+  "ownership": {
+    "codeowners": [],
+    "recentContributors": []
+  }
+}
