@@ -8,6 +8,7 @@ import {
   type Edge,
   type Node,
   type NodeMouseHandler,
+  type ReactFlowInstance,
 } from '@xyflow/react';
 import '@xyflow/react/dist/style.css';
 import type { Component, Feature } from '@devmap/schema';
@@ -130,10 +131,16 @@ export function DependenciesTab({ feature }: Props) {
           nodeTypes={NODE_TYPES}
           onNodeClick={onNodeClick}
           fitView
-          fitViewOptions={{ padding: 0.2 }}
+          fitViewOptions={{ padding: 0.15 }}
           minZoom={0.3}
           maxZoom={1.5}
           proOptions={{ hideAttribution: true }}
+          onInit={(instance: ReactFlowInstance) => {
+            // Belt-and-suspenders: re-fit AFTER dagre-computed positions
+            // are mounted and node DOM is measured. The `fitView` prop
+            // alone occasionally fits before measurement on first paint.
+            requestAnimationFrame(() => instance.fitView({ padding: 0.15 }));
+          }}
         >
           <Background gap={18} size={1} />
           <Controls position="bottom-right" showInteractive={false} />
