@@ -77,7 +77,10 @@ export async function startServer(opts: ServeOptions): Promise<ServeHandles> {
     viteChild = spawn('pnpm', ['exec', 'vite', '--port', String(webPort), '--strictPort'], {
       cwd: webDir,
       stdio: ['ignore', 'inherit', 'inherit'],
-      env: { ...process.env, FORCE_COLOR: '1' },
+      // DEVMAP_API_PORT lets vite.config.ts target the matching Express
+      // process — required when multiple `devmap feature` instances run
+      // simultaneously on different --port-server values.
+      env: { ...process.env, FORCE_COLOR: '1', DEVMAP_API_PORT: String(serverPort) },
     });
     await waitForUrl(`http://localhost:${webPort}/`, 8000);
   }
