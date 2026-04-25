@@ -1,0 +1,579 @@
+{
+  "$ref": "#/definitions/DevMapFeatureArtifact",
+  "definitions": {
+    "DevMapFeatureArtifact": {
+      "type": "object",
+      "properties": {
+        "devmapVersion": {
+          "type": "string",
+          "const": "1.0.0"
+        },
+        "generatedAt": {
+          "type": "string"
+        },
+        "feature": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "displayName": {
+              "type": "string"
+            },
+            "summary": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "name",
+            "displayName",
+            "summary"
+          ],
+          "additionalProperties": false
+        },
+        "repository": {
+          "type": "object",
+          "properties": {
+            "name": {
+              "type": "string"
+            },
+            "rootPath": {
+              "type": "string"
+            },
+            "language": {
+              "type": "string",
+              "enum": [
+                "java",
+                "kotlin"
+              ]
+            },
+            "framework": {
+              "type": "string"
+            },
+            "microservices": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "module": {
+                    "type": "string"
+                  },
+                  "port": {
+                    "anyOf": [
+                      {
+                        "type": "integer"
+                      },
+                      {
+                        "type": "null"
+                      }
+                    ]
+                  },
+                  "description": {
+                    "type": [
+                      "string",
+                      "null"
+                    ]
+                  }
+                },
+                "required": [
+                  "name",
+                  "module"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "name",
+            "rootPath",
+            "language",
+            "framework",
+            "microservices"
+          ],
+          "additionalProperties": false
+        },
+        "components": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string"
+              },
+              "fqn": {
+                "type": "string"
+              },
+              "simpleName": {
+                "type": "string"
+              },
+              "kind": {
+                "type": "string",
+                "enum": [
+                  "controller",
+                  "service",
+                  "repository",
+                  "entity",
+                  "client",
+                  "config",
+                  "dto",
+                  "exception",
+                  "application",
+                  "mapper",
+                  "other"
+                ]
+              },
+              "microservice": {
+                "type": "string"
+              },
+              "filePath": {
+                "type": "string"
+              },
+              "lineStart": {
+                "type": "integer"
+              },
+              "loc": {
+                "type": "integer"
+              },
+              "annotations": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "publicMethods": {
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "name": {
+                      "type": "string"
+                    },
+                    "signature": {
+                      "type": "string"
+                    },
+                    "annotations": {
+                      "type": "array",
+                      "items": {
+                        "type": "string"
+                      }
+                    },
+                    "lineStart": {
+                      "type": "integer"
+                    }
+                  },
+                  "required": [
+                    "name",
+                    "signature"
+                  ],
+                  "additionalProperties": false
+                }
+              },
+              "summary": {
+                "type": "string"
+              },
+              "core": {
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "id",
+              "fqn",
+              "simpleName",
+              "kind",
+              "microservice",
+              "filePath",
+              "annotations",
+              "core"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "flow": {
+          "type": "object",
+          "properties": {
+            "mermaid": {
+              "type": "string"
+            },
+            "narrative": {
+              "type": "string"
+            },
+            "steps": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "index": {
+                    "type": "integer"
+                  },
+                  "actor": {
+                    "type": "string"
+                  },
+                  "action": {
+                    "type": "string"
+                  },
+                  "componentId": {
+                    "type": "string"
+                  },
+                  "details": {
+                    "type": "string"
+                  }
+                },
+                "required": [
+                  "index",
+                  "actor",
+                  "action",
+                  "componentId"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "mermaid",
+            "narrative",
+            "steps"
+          ],
+          "additionalProperties": false
+        },
+        "dependencies": {
+          "type": "object",
+          "properties": {
+            "nodes": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "id": {
+                    "type": "string"
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "microservice": {
+                    "type": "string"
+                  },
+                  "kind": {
+                    "type": "string"
+                  },
+                  "loc": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "id",
+                  "label",
+                  "microservice",
+                  "kind",
+                  "loc"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "edges": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "from": {
+                    "type": "string"
+                  },
+                  "to": {
+                    "type": "string"
+                  },
+                  "type": {
+                    "type": "string",
+                    "enum": [
+                      "import",
+                      "http",
+                      "gateway-route",
+                      "discovery"
+                    ]
+                  },
+                  "label": {
+                    "type": "string"
+                  },
+                  "sourceFile": {
+                    "type": "string"
+                  },
+                  "sourceLine": {
+                    "type": "integer"
+                  }
+                },
+                "required": [
+                  "from",
+                  "to",
+                  "type"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "nodes",
+            "edges"
+          ],
+          "additionalProperties": false
+        },
+        "persistence": {
+          "type": "object",
+          "properties": {
+            "mermaidER": {
+              "type": "string"
+            },
+            "entities": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "fqn": {
+                    "type": "string"
+                  },
+                  "simpleName": {
+                    "type": "string"
+                  },
+                  "table": {
+                    "type": "string"
+                  },
+                  "fields": {
+                    "type": "array",
+                    "items": {
+                      "type": "object",
+                      "properties": {
+                        "name": {
+                          "type": "string"
+                        },
+                        "type": {
+                          "type": "string"
+                        },
+                        "column": {
+                          "type": "string"
+                        },
+                        "primaryKey": {
+                          "type": "boolean"
+                        },
+                        "relation": {
+                          "type": "object",
+                          "properties": {
+                            "kind": {
+                              "type": "string",
+                              "enum": [
+                                "OneToMany",
+                                "ManyToOne",
+                                "OneToOne",
+                                "ManyToMany",
+                                "ForeignKeyByValue"
+                              ]
+                            },
+                            "target": {
+                              "type": "string"
+                            },
+                            "joinColumn": {
+                              "type": "string"
+                            },
+                            "fetch": {
+                              "type": "string"
+                            },
+                            "cascade": {
+                              "type": "string"
+                            }
+                          },
+                          "additionalProperties": false
+                        }
+                      },
+                      "required": [
+                        "name",
+                        "type"
+                      ],
+                      "additionalProperties": false
+                    }
+                  }
+                },
+                "required": [
+                  "fqn",
+                  "simpleName",
+                  "table",
+                  "fields"
+                ],
+                "additionalProperties": false
+              }
+            },
+            "operations": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "entity": {
+                    "type": "string"
+                  },
+                  "method": {
+                    "type": "string"
+                  },
+                  "inferredSql": {
+                    "type": "string"
+                  },
+                  "custom": {
+                    "type": "boolean"
+                  }
+                },
+                "required": [
+                  "entity",
+                  "method",
+                  "inferredSql"
+                ],
+                "additionalProperties": false
+              }
+            }
+          },
+          "required": [
+            "mermaidER",
+            "entities",
+            "operations"
+          ],
+          "additionalProperties": false
+        },
+        "endpoints": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "method": {
+                "type": "string",
+                "enum": [
+                  "GET",
+                  "POST",
+                  "PUT",
+                  "DELETE",
+                  "PATCH"
+                ]
+              },
+              "path": {
+                "type": "string"
+              },
+              "gatewayPath": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "componentId": {
+                "type": "string"
+              },
+              "handlerMethod": {
+                "type": "string"
+              },
+              "microservice": {
+                "type": "string"
+              },
+              "requestBody": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "responseType": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              },
+              "responseStatus": {
+                "type": [
+                  "string",
+                  "null"
+                ]
+              }
+            },
+            "required": [
+              "method",
+              "path",
+              "componentId",
+              "microservice"
+            ],
+            "additionalProperties": false
+          }
+        },
+        "events": {
+          "type": "object",
+          "properties": {
+            "detected": {
+              "type": "boolean"
+            },
+            "scannedPatterns": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "subscribers": {
+              "type": "array",
+              "items": {}
+            },
+            "publishers": {
+              "type": "array",
+              "items": {}
+            },
+            "placeholderMessage": {
+              "type": "string"
+            }
+          },
+          "required": [
+            "detected",
+            "scannedPatterns"
+          ],
+          "additionalProperties": false
+        },
+        "ownership": {
+          "type": "object",
+          "properties": {
+            "codeowners": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            },
+            "recentContributors": {
+              "type": "array",
+              "items": {
+                "type": "object",
+                "properties": {
+                  "name": {
+                    "type": "string"
+                  },
+                  "email": {
+                    "type": "string"
+                  },
+                  "commits": {
+                    "type": "integer"
+                  },
+                  "lastCommitDate": {
+                    "type": "string"
+                  }
+                },
+                "additionalProperties": false
+              }
+            }
+          },
+          "additionalProperties": false
+        }
+      },
+      "required": [
+        "devmapVersion",
+        "generatedAt",
+        "feature",
+        "repository",
+        "components",
+        "flow",
+        "dependencies",
+        "persistence",
+        "endpoints",
+        "events",
+        "ownership"
+      ],
+      "additionalProperties": false
+    }
+  },
+  "$schema": "http://json-schema.org/draft-07/schema#"
+}

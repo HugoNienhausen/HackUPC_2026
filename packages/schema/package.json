@@ -10,6 +10,7 @@
   },
   "scripts": {
     "build": "tsx src/build.ts",
+    "validate": "tsx src/validate.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
