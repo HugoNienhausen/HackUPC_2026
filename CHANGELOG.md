@@ -2,6 +2,40 @@
 
 All notable changes to devmap. Format loosely follows Keep a Changelog; phases match [PLAN.md](./PLAN.md).
 
+## [0.2.0] — 2026-04-25
+
+### Phase 2 — Feature identification by lexical match
+
+`devmap feature <name>` replaces the Phase 0 placeholder. Walks the repo via the Phase 1 indexer, scores classes by lexical match, expands one or more hops along the class graph, prints sorted FQNs grouped by microservice. End-to-end on PetClinic: `feature visits` → 12 candidates, `feature owners` → 19 candidates, both <100 ms.
+
+- `agent/src/feature/lexicalMatch.ts` — score = simpleName-contains-stem×3 + package-contains-stem×2 + relativePath-contains-stem×1. Stem strips a trailing `s` (so `visits → visit`, `owners → owner`). Threshold 1. Classes flagged `bootstrap` or `crossCutting` by the indexer are filtered **before** scoring per the locked decisions — they cannot enter the candidate set under any score.
+- `agent/src/feature/expand.ts` — directed-graph BFS over a class adjacency built from three edge types:
+  - `import` edges → both directions (symmetric).
+  - `http` / `discovery` edges → source class ↔ controllers in target service (symmetric, controller-targeted, not service fan-out).
+  - `gateway-route` edges → controller-in-target-service → origin class (asymmetric; origin is `pickGatewayOriginClass`, defaulting to api-gateway controllers whose simple name contains "gateway", else alphabetically-first controller).
+- `agent/src/cli.ts` — new `feature <name>` action with `--repo <path>` and `--depth <n>` options. Prints a compact summary line (`N seed + M expanded = T candidates`) followed by per-service breakdowns.
+
+### Two adjustments made during integration
+
+These were pre-authorized fallbacks in the Phase 2 brief but worth surfacing here so future work understands the trade-offs.
+
+1. **Default expansion depth = 2**, not 1. PLAN.md §2 specifies `default 1`, but at depth=1 `CustomersServiceClient` is unreachable from the `visits` lexical seed: the path is `seed → ApiGatewayController → CustomersServiceClient`, two hops. PLAN.md §2 also lists CSC as expected-periphery, contradicting itself. Bumping to depth=2 reconciles. The fan-out is controlled by the controller-targeting rule, so depth=2 doesn't pull in DTOs or non-controller siblings.
+2. **Gateway-route adjacency is asymmetric** — controller-in-target-service → origin only, not bidirectional. With symmetric undirected edges at depth=2, the gateway acts as a 2-hop bridge between unrelated routed services (e.g. `visits-service VR → AGC → customers-service PetResource` would leak `PetResource`, which is in `expectedAbsent` for visits). Asymmetric preserves the "routed controller can step into AGC" semantic without bridging.
+
+### Tests
+
+`pnpm -F @devmap/agent test` — 38 vitest tests across 8 files:
+
+- `lexicalMatch.test.ts` — 8 tests: 3 weight isolations, 2 flag pre-filters (bootstrap, crossCutting), threshold rejection, stem behavior, sort order.
+- `expand.test.ts` — 5 tests: depth=1 vs depth=2 on a 3-node line graph, flagged-seed pruning, http edge controller-vs-DTO targeting, gateway-route asymmetric origin reachability with anti-bridge assertion, origin-heuristic fallback ordering.
+- `featureVisits.integration.test.ts` — 1 test: against real PetClinic + `tests/fixtures/visits-ground-truth.json`, asserts `missingCore`, `missingPeriphery`, `leakedAbsent` are all empty.
+- Plus 24 carry-over tests from Phase 1.
+
+### Acceptance — PLAN.md §2 Phase 2
+
+- ✅ `devmap feature visits`: 12 candidates spanning visits-service, api-gateway, genai-service. Lexical seed (9): Visit, VisitRepository, VisitResource, VisitsServiceClient, plus matching DTOs and inner records. Expanded (3): ApiGatewayController, CustomersServiceClient, OwnerDetails (api-gateway DTO). MetricConfig and VisitsServiceApplication absent.
+- ✅ `devmap feature owners`: 19 candidates with the customers-service owners cluster fully visible (Owner, OwnerRepository, OwnerResource, OwnerEntityMapper, OwnerRequest), plus the api-gateway and genai-service classes that orchestrate owner lookups.
+
 ## [0.1.0] — 2026-04-25
 
 ### Phase 1 — Static indexer
