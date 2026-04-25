@@ -1,1 +1,1 @@
-export { FeatureSchema, type Feature } from './feature';
+export * from './feature';
