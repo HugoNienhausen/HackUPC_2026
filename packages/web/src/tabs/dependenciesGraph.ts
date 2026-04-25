@@ -6,7 +6,9 @@ export interface ServiceNodeData extends Record<string, unknown> {
   component: Component;
 }
 
-const NODE_MIN = { width: 100, height: 40 };
+// width raised from 100 to 150 so VisitRepository / CustomersServiceClient
+// don't truncate at the small end of the loc-driven scale.
+const NODE_MIN = { width: 150, height: 40 };
 const NODE_MAX = { width: 200, height: 80 };
 
 export function nodeSizeForLoc(loc: number | undefined): { width: number; height: number } {
